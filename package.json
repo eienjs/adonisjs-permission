@@ -27,6 +27,8 @@
     "version": "pnpm run build && pnpm run changelog"
   },
   "devDependencies": {
+    "@adonisjs/core": "^6.15.1",
+    "@adonisjs/lucid": "^21.4.0",
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
     "@japa/assert": "^3.0.0",
@@ -47,6 +49,10 @@
     "ts-node-maintained": "^10.9.4",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "@adonisjs/core": "^6.15.1",
+    "@adonisjs/lucid": "^21.4.0"
   },
   "author": "Fernando Isidro <luffynando@gmail.com>",
   "license": "MIT",
