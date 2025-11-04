@@ -1,23 +1,28 @@
 {
-  "name": "@eienjs/adonisjs-pkg-boilerplate",
+  "name": "@eienjs/adonisjs-permission",
   "type": "module",
   "version": "0.0.0",
   "packageManager": "pnpm@10.20.0",
-  "description": "A opinionated boilerplate for AdonisJS packages",
+  "description": "Associate users with roles and permissions",
   "author": "Fernando Isidro <luffynando@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/eienjs/adonisjs-pkg-boilerplate",
+  "homepage": "https://github.com/eienjs/adonisjs-permission",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eienjs/adonisjs-pkg-boilerplate.git"
+    "url": "git+https://github.com/eienjs/adonisjs-permission.git"
   },
   "bugs": {
-    "url": "https://github.com/eienjs/adonisjs-pkg-boilerplate/issues"
+    "url": "https://github.com/eienjs/adonisjs-permission/issues"
   },
   "keywords": [
     "adonis",
     "adonisjs",
-    "adonis-framework"
+    "adonis-framework",
+    "lucid",
+    "permissions",
+    "permission",
+    "roles",
+    "role"
   ],
   "engines": {
     "node": ">=20.19"
