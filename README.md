@@ -30,7 +30,7 @@ The `@eienjs/adonisjs-permission` library is licensed for use under the MIT Lice
 [source]: https://github.com/eienjs/adonisjs-permission
 [node-version]: https://www.npmjs.com/package/@eienjs/adonisjs-permission
 [release]: https://www.npmjs.com/package/@eienjs/adonisjs-permission
-[license]: https://github.com/eienjs/adonisjs-permission/blob/main/LICENSE.md
+[license]: https://github.com/eienjs/adonisjs-permission/blob/main/LICENSE
 [build]: https://github.com/eienjs/adonisjs-permission/actions/workflows/build.yml?query=branch:main
 [downloads]: https://www.npmjs.com/package/@eienjs/adonisjs-permission
 [badge-source]: https://img.shields.io/badge/source-eienjs/adonisjs--permission-blue.svg?logo=github
