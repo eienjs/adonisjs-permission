@@ -23,6 +23,7 @@ interface PermissionRelationQueryBuilder {
 
 interface HasPermissionsInternalInstance {
   currentTeamId?: string | number | null;
+  usesTeamPivot?: boolean;
   guardName?: string;
   permissions: PermissionInstance[];
   load: (relation: string) => Promise<void>;
@@ -39,6 +40,8 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 ): Model & ModelConstructor<InstanceType<Model> & HasPermissionsMixin> => {
   class ModelWithPermissions extends superclass {
     public currentTeamId?: string | number | null;
+
+    protected usesTeamPivot = true;
 
     @manyToMany(() => ModelResolver.getInstance().getPermissionModel() as LucidModel, {
       pivotTable: getPivotTableNames().modelHasPermissions,
@@ -57,7 +60,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       const pivotAttributes: Record<string, unknown> = {};
-      if (resolver.config.teams) {
+      if (resolver.config.teams && self.usesTeamPivot !== false) {
         pivotAttributes[resolver.config.teamForeignKey] = teamId;
       }
 
@@ -95,7 +98,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       const pivotAttributes: Record<string, unknown> = {};
-      if (resolver.config.teams) {
+      if (resolver.config.teams && self.usesTeamPivot !== false) {
         pivotAttributes[resolver.config.teamForeignKey] = teamId;
       }
 
@@ -146,7 +149,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 
       let query = self.related('permissions').query().where('name', targetName);
 
-      if (resolver.config.teams) {
+      if (resolver.config.teams && self.usesTeamPivot !== false) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);
         } else {
@@ -159,13 +162,44 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       return Boolean(found);
     }
 
+    public async hasPermissionTo(
+      permission: string | LucidRow,
+      _guardName?: string,
+    ): Promise<boolean> {
+      return this.hasDirectPermission(permission);
+    }
+
+    public async hasAnyPermission(
+      ...permissions: (string | LucidRow)[]
+    ): Promise<boolean> {
+      for (const p of permissions) {
+        if (await this.hasPermissionTo(p)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    public async hasAllPermissions(
+      ...permissions: (string | LucidRow)[]
+    ): Promise<boolean> {
+      for (const p of permissions) {
+        if (!(await this.hasPermissionTo(p))) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     public async getDirectPermissions(): Promise<LucidRow[]> {
       const resolver = ModelResolver.getInstance();
       const self = this as unknown as HasPermissionsInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       let query = self.related('permissions').query();
-      if (resolver.config.teams) {
+      if (resolver.config.teams && self.usesTeamPivot !== false) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);
         } else {

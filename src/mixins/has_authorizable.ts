@@ -196,26 +196,6 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       throw E_PERMISSION_UNAUTHORIZED_ACCESS.forPermissions([targetName]);
     }
 
-    public async hasAnyPermission(...permissions: (string | LucidRow)[]): Promise<boolean> {
-      for (const p of permissions) {
-        if (await this.hasPermissionTo(p)) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    public async hasAllPermissions(...permissions: (string | LucidRow)[]): Promise<boolean> {
-      for (const p of permissions) {
-        if (!(await this.hasPermissionTo(p))) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
     public async can(permission: string | LucidRow): Promise<boolean> {
       return this.hasPermissionTo(permission);
     }

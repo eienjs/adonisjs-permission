@@ -116,28 +116,6 @@ export type PermissionModelContract = LucidModel & {
   findOrCreate: (attributes: { name: string; guardName?: string }) => Promise<PermissionInstance>;
 };
 
-export interface RoleableProperties extends LucidRow {
-  permissions: ManyToMany<LucidModel>;
-}
-
-export interface RoleableMethods {
-  givePermissionTo: (...permissions: (string | LucidRow)[]) => Promise<void>;
-  syncPermissions: (...permissions: (string | LucidRow)[]) => Promise<void>;
-  revokePermissionTo: (...permissions: (string | LucidRow)[]) => Promise<void>;
-  hasPermissionTo: (permission: string | LucidRow) => Promise<boolean>;
-  hasAnyPermission: (...permissions: (string | LucidRow)[]) => Promise<boolean>;
-  hasAllPermissions: (...permissions: (string | LucidRow)[]) => Promise<boolean>;
-  getPermissionNames: () => Promise<string[]>;
-}
-
-export interface RoleableMixin extends RoleableMethods, RoleableProperties {}
-
-export interface PermissibleProperties extends LucidRow {
-  roles: ManyToMany<LucidModel>;
-}
-
-export type PermissibleMixin = PermissibleProperties;
-
 export interface HasPermissionsProperties extends LucidRow {
   permissions: ManyToMany<LucidModel>;
 }
@@ -147,11 +125,26 @@ export interface HasPermissionsMethods {
   syncPermissions: (...permissions: (string | LucidRow)[]) => Promise<void>;
   revokePermissionTo: (...permissions: (string | LucidRow)[]) => Promise<void>;
   hasDirectPermission: (permission: string | LucidRow) => Promise<boolean>;
+  hasPermissionTo: (permission: string | LucidRow, guardName?: string) => Promise<boolean>;
+  hasAnyPermission: (...permissions: (string | LucidRow)[]) => Promise<boolean>;
+  hasAllPermissions: (...permissions: (string | LucidRow)[]) => Promise<boolean>;
   getDirectPermissions: () => Promise<LucidRow[]>;
   getPermissionNames: () => Promise<string[]>;
 }
 
 export interface HasPermissionsMixin extends HasPermissionsMethods, HasPermissionsProperties {}
+
+export type RoleableProperties = HasPermissionsProperties;
+
+export type RoleableMethods = HasPermissionsMethods;
+
+export type RoleableMixin = HasPermissionsMixin;
+
+export interface PermissibleProperties extends LucidRow {
+  roles: ManyToMany<LucidModel>;
+}
+
+export type PermissibleMixin = PermissibleProperties;
 
 export interface HasRolesProperties extends LucidRow {
   roles: ManyToMany<LucidModel>;
