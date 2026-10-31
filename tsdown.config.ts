@@ -3,6 +3,7 @@ import { defineConfig } from 'tsdown';
 export default defineConfig({
   entry: [
     'index.ts',
+    { 'providers/*': 'providers/*.ts' },
   ],
   outDir: 'build',
   clean: true,
@@ -20,9 +21,6 @@ export default defineConfig({
   //   },
   // }, // Add this back when need commands
   unbundle: true,
-  deps: {
-    skipNodeModulesBundle: true,
-  },
   copy: [
     { from: 'stubs/**/*.stub', to: 'build/stubs', flatten: false },
   ],

@@ -1,9 +1,12 @@
 minimumReleaseAge: 1440
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
-  - '@eienjs/eslint-config'
-shellEmulator: true
+  - '@eienjs/*'
+
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 2880
+shamefullyHoist: true
+shellEmulator: true
 
 allowBuilds:
   '@swc/core': true
