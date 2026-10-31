@@ -1,0 +1,32 @@
+{{{
+  exports({
+    to: app.modelsPath('role.ts')
+  })
+}}}
+import { compose } from '@adonisjs/core/helpers'
+import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { type DateTime } from 'luxon'
+import { Roleable } from '@eienjs/adonisjs-permission'
+
+export default class Role extends compose(BaseModel, Roleable()) {
+  @column({ isPrimary: true })
+  declare id: number
+
+  @column()
+  declare name: string
+
+  @column({ columnName: 'guard_name' })
+  declare guardName: string
+
+{{#if teams}}
+  @column({ columnName: '{{ teamForeignKey }}' })
+  declare {{ teamProperty }}: number | null
+{{/if}}
+
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+

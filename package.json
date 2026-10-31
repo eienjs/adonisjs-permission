@@ -26,6 +26,12 @@
   ],
   "exports": {
     ".": "./build/index.js",
+    "./types": "./build/src/types.js",
+    "./commands": "./build/commands/main.js",
+    "./permissions_provider": "./build/providers/permissions_provider.js",
+    "./role_middleware": "./build/middleware/role_middleware.js",
+    "./permission_middleware": "./build/middleware/permission_middleware.js",
+    "./role_or_permission_middleware": "./build/middleware/role_or_permission_middleware.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -38,7 +44,6 @@
     "prepare": "is-in-ci || husky",
     "changelog": "auto-changelog -u -p",
     "commitlint": "commitlint --edit",
-    "index:commands": "adonis-kit index build/commands",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -52,7 +57,8 @@
   "peerDependencies": {
     "@adonisjs/assembler": "^8.6.0",
     "@adonisjs/core": "^7.6.0",
-    "@adonisjs/lucid": "^22.4.2"
+    "@adonisjs/lucid": "^22.4.2",
+    "luxon": "^3.4.4"
   },
   "peerDependenciesMeta": {
     "@adonisjs/assembler": {
@@ -69,15 +75,20 @@
     "@commitlint/config-conventional": "^21.2.4",
     "@eienjs/eslint-config": "^2.3.1",
     "@japa/assert": "^4.2.0",
+    "@japa/file-system": "^3.0.0",
     "@japa/runner": "^5.4.0",
     "@poppinss/ts-exec": "^1.5.1",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/luxon": "^3.7.6",
     "@types/node": "^26.6.6",
     "auto-changelog": "^2.7.0",
+    "better-sqlite3": "^13.0.3",
     "c8": "^12.0.0",
     "eslint": "^10.13.0",
     "eslint-plugin-erasable-syntax-only": "^0.7.2",
     "husky": "^9.1.7",
     "is-in-ci": "^2.0.0",
+    "luxon": "^3.7.2",
     "release-it": "^21.1.1",
     "tsdown": "^0.23.4",
     "typescript": "^6.0.3"

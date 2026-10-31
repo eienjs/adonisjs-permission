@@ -1,0 +1,33 @@
+{{{
+  exports({
+    to: app.migrationsPath(migration.fileName)
+  })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = '{{ migration.tableName }}'
+
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table
+        .integer('{{ permissionPivotKey }}')
+        .unsigned()
+        .references('id')
+        .inTable('{{ permissionsTable }}')
+        .onDelete('CASCADE')
+      table.integer('{{ modelMorphKey }}').unsigned().notNullable()
+{{#if teams}}
+      table.integer('{{ teamForeignKey }}').unsigned().nullable()
+      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}', '{{ teamForeignKey }}'])
+{{else}}
+      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}'])
+{{/if}}
+    })
+  }
+
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}
+

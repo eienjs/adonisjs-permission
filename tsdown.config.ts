@@ -4,6 +4,8 @@ export default defineConfig({
   entry: [
     'index.ts',
     { 'providers/*': 'providers/*.ts' },
+    { 'commands/*': 'commands/*.ts' },
+    { 'middleware/*': 'src/middleware/*.ts' },
   ],
   outDir: 'build',
   clean: true,
@@ -12,14 +14,6 @@ export default defineConfig({
   fixedExtension: false,
   dts: true,
   target: 'esnext',
-  exports: true,
-  // exports: {
-  //   customExports(pkg, _context) {
-  //     pkg['./commands'] = './build/commands/main.js';
-
-  //     return pkg;
-  //   },
-  // }, // Add this back when need commands
   unbundle: true,
   copy: [
     { from: 'stubs/**/*.stub', to: 'build/stubs', flatten: false },

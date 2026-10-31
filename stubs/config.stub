@@ -1,0 +1,36 @@
+{{{
+  exports({ to: app.configPath('permissions.ts') })
+}}}
+import { defineConfig } from '@eienjs/adonisjs-permission'
+
+export default defineConfig({
+  models: {
+    role: () => import('#models/role'),
+    permission: () => import('#models/permission'),
+  },
+
+  defaultGuard: '{{ config.defaultGuard }}',
+
+  teams: {{ config.teams }},
+
+  enableWildcardPermission: {{ config.enableWildcardPermission }},
+
+  superAdmin: {
+    enabled: true,
+    role: 'Super-Admin',
+  },
+
+  catalog: {
+    permissions: [
+      // 'view articles',
+      // 'create articles',
+      // 'edit articles',
+      // 'delete articles',
+    ],
+    roles: {
+      // 'admin': ['view articles', 'create articles', 'edit articles', 'delete articles'],
+      // 'editor': ['view articles', 'create articles', 'edit articles'],
+    },
+  },
+})
+

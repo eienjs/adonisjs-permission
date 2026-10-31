@@ -1,0 +1,27 @@
+{{{
+  exports({
+    to: app.modelsPath('permission.ts')
+  })
+}}}
+import { compose } from '@adonisjs/core/helpers'
+import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { type DateTime } from 'luxon'
+import { Permissible } from '@eienjs/adonisjs-permission'
+
+export default class Permission extends compose(BaseModel, Permissible()) {
+  @column({ isPrimary: true })
+  declare id: number
+
+  @column()
+  declare name: string
+
+  @column({ columnName: 'guard_name' })
+  declare guardName: string
+
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
