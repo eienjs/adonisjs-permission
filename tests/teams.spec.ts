@@ -76,4 +76,3 @@ test.group('Teams Multi-Tenancy', (group) => {
     assert.isFalse(await user.hasRole('editor'));
   });
 });
-

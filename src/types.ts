@@ -188,29 +188,23 @@ export interface HasAuthorizableMixin
   HasRolesMixin,
   HasPermissionsMixin {}
 
-export type Roleable = () => <Model extends NormalizeConstructor<typeof BaseModel>>(
+export type Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ) => Model & RoleModelContract & ModelConstructor<InstanceType<Model> & RolePropertiesModel & RoleableMixin>;
 
-export type Permissible = () => <Model extends NormalizeConstructor<typeof BaseModel>>(
+export type Permissible = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ) => Model & PermissionModelContract & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleProperties>;
 
-export type HasPermissions = (
-  tableName?: string,
-) => <Model extends NormalizeConstructor<typeof BaseModel>>(
+export type HasPermissions = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ) => Model & ModelConstructor<InstanceType<Model> & HasPermissionsMixin>;
 
-export type HasRoles = (
-  tableName?: string,
-) => <Model extends NormalizeConstructor<typeof BaseModel>>(
+export type HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ) => Model & ModelConstructor<InstanceType<Model> & HasRolesMixin>;
 
-export type HasAuthorizable = (
-  config?: AuthorizableConfig,
-) => <Model extends NormalizeConstructor<typeof BaseModel>>(
+export type HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ) => Model & ModelConstructor<InstanceType<Model> & HasAuthorizableMixin>;
 

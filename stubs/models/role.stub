@@ -8,7 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { type DateTime } from 'luxon'
 import { Roleable } from '@eienjs/adonisjs-permission'
 
-export default class Role extends compose(BaseModel, Roleable()) {
+export default class Role extends compose(BaseModel, Roleable) {
   @column({ isPrimary: true })
   declare id: number
 

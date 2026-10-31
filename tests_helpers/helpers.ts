@@ -16,28 +16,28 @@ import { Database } from '@adonisjs/lucid/database';
 import { BaseModel, column } from '@adonisjs/lucid/orm';
 import { getActiveTest } from '@japa/runner';
 import defineConfig from '../src/define_config.js';
-import { hasAuthorizable } from '../src/mixins/has_authorizable.js';
-import { hasPermissions } from '../src/mixins/has_permissions.js';
-import { hasRoles } from '../src/mixins/has_roles.js';
-import { permissible } from '../src/mixins/permissible.js';
-import { roleable } from '../src/mixins/roleable.js';
+import { HasAuthorizable } from '../src/mixins/has_authorizable.js';
+import { HasPermissions } from '../src/mixins/has_permissions.js';
+import { HasRoles } from '../src/mixins/has_roles.js';
+import { Permissible } from '../src/mixins/permissible.js';
+import { Roleable } from '../src/mixins/roleable.js';
 import { ModelResolver } from '../src/model_resolver.js';
 import { PermissionRegistrar } from '../src/registrar.js';
 
 export const BASE_URL = new URL('tmp/', import.meta.url);
 
 // Define Models for testing
-export class Role extends compose(BaseModel, roleable()) {
+export class Role extends compose(BaseModel, Roleable) {
   @column({ isPrimary: true })
   public declare id: number;
 }
 
-export class Permission extends compose(BaseModel, permissible()) {
+export class Permission extends compose(BaseModel, Permissible) {
   @column({ isPrimary: true })
   public declare id: number;
 }
 
-export class User extends compose(BaseModel, hasAuthorizable()) {
+export class User extends compose(BaseModel, HasAuthorizable) {
   @column({ isPrimary: true })
   public declare id: number;
 
@@ -226,4 +226,4 @@ export const setupApp = async (
   return { app, ace, modelResolver, registrar, db };
 };
 
-export { hasAuthorizable, hasPermissions, hasRoles, permissible, roleable };
+export { HasAuthorizable, HasPermissions, HasRoles, Permissible, Roleable };
