@@ -10,6 +10,7 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
+      // Role foreign key (change to .bigInteger() or .uuid() if roles table uses BigInt/UUID)
       table
         .integer('{{ rolePivotKey }}')
         .unsigned()
@@ -17,10 +18,12 @@ export default class extends BaseSchema {
         .inTable('{{ rolesTable }}')
         .onDelete('CASCADE')
       table.string('{{ modelMorphType }}').notNullable()
-      table.integer('{{ modelMorphKey }}').unsigned().notNullable()
+      // Polymorphic model key: string accommodates increments, bigIncrements, and UUIDs
+      table.string('{{ modelMorphKey }}').notNullable()
       table.index(['{{ modelMorphKey }}', '{{ modelMorphType }}'])
 {{#if teams}}
-      table.integer('{{ teamForeignKey }}').unsigned().nullable()
+      // Team / Tenant foreign key: string accommodates integer or UUID identifiers
+      table.string('{{ teamForeignKey }}').nullable()
       table.index(['{{ rolePivotKey }}', '{{ modelMorphKey }}', '{{ modelMorphType }}', '{{ teamForeignKey }}'])
 {{else}}
       table.index(['{{ rolePivotKey }}', '{{ modelMorphKey }}', '{{ modelMorphType }}'])

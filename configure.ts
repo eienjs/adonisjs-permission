@@ -71,7 +71,7 @@ export async function configure(command: ConfigureCommand): Promise<void> {
    */
   await codemods.updateRcFile((rcFile) => {
     rcFile.addCommand('@eienjs/adonisjs-permission/commands');
-    rcFile.addProvider('@eienjs/adonisjs-permission/permissions_provider');
+    rcFile.addProvider('@eienjs/adonisjs-permission/providers/permissions_provider');
   });
 
   /**
@@ -159,15 +159,15 @@ export async function configure(command: ConfigureCommand): Promise<void> {
     await codemods.registerMiddleware('named', [
       {
         name: 'role',
-        path: '@eienjs/adonisjs-permission/role_middleware',
+        path: '@eienjs/adonisjs-permission/middleware/role_middleware',
       },
       {
         name: 'permission',
-        path: '@eienjs/adonisjs-permission/permission_middleware',
+        path: '@eienjs/adonisjs-permission/middleware/permission_middleware',
       },
       {
         name: 'roleOrPermission',
-        path: '@eienjs/adonisjs-permission/role_or_permission_middleware',
+        path: '@eienjs/adonisjs-permission/middleware/role_or_permission_middleware',
       },
     ]);
   }

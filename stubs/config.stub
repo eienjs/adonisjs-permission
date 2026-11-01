@@ -4,26 +4,57 @@
 import { defineConfig } from '@eienjs/adonisjs-permission'
 
 export default defineConfig({
+  /**
+   * Lucid models for roles and permissions
+   */
   models: {
     role: () => import('#models/role'),
     permission: () => import('#models/permission'),
   },
 
+  /**
+   * Polymorphic morph map for authorizable entities
+   */
   morphMap: {
     user: () => import('#models/user'),
   },
 
+  /**
+   * Default guard used for permissions and roles
+   */
   defaultGuard: '{{ config.defaultGuard }}',
 
+  /**
+   * Multi-tenancy / Teams permissions
+   */
   teams: {{ config.teams }},
+  teamForeignKey: '{{ config.teamForeignKey }}',
 
+  /**
+   * Apache Shiro style wildcard permissions (e.g. 'posts.*')
+   */
   enableWildcardPermission: {{ config.enableWildcardPermission }},
 
+  /**
+   * Super-admin configuration (bypasses all permission checks)
+   */
   superAdmin: {
     enabled: true,
     role: 'Super-Admin',
   },
 
+  /**
+   * Cache permissions for enhanced lookup performance
+   */
+  cache: {
+    enabled: true,
+    key: 'adonisjs_permission_cache',
+    ttl: '24h',
+  },
+
+  /**
+   * Permissions and roles catalog for initial sync/seeding
+   */
   catalog: {
     permissions: [
       // 'view articles',
@@ -37,4 +68,5 @@ export default defineConfig({
     },
   },
 })
+
 

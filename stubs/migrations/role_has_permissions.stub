@@ -10,6 +10,7 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
+      // Foreign keys (change to .bigInteger() or .uuid() if permissions/roles use BigInt/UUID)
       table
         .integer('{{ permissionPivotKey }}')
         .unsigned()

@@ -10,7 +10,7 @@ import { Roleable } from '@eienjs/adonisjs-permission'
 
 export default class Role extends compose(BaseModel, Roleable) {
   @column({ isPrimary: true })
-  declare id: number
+  declare id: number | string
 
   @column()
   declare name: string
@@ -20,7 +20,7 @@ export default class Role extends compose(BaseModel, Roleable) {
 
 {{#if teams}}
   @column({ columnName: '{{ teamForeignKey }}' })
-  declare {{ teamProperty }}: number | null
+  declare {{ teamProperty }}: number | string | null
 {{/if}}
 
   @column.dateTime({ autoCreate: true })
