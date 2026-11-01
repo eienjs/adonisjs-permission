@@ -13,6 +13,8 @@ export interface PermissionsModelsConfig {
   permission: () => Promise<{ default: LucidModel }>;
 }
 
+export type PermissionsMorphMapConfig = Record<string, () => Promise<{ default: LucidModel }>>;
+
 export interface PermissionsCatalogConfig {
   permissions?: string[];
   roles?: Record<string, string[]>;
@@ -30,6 +32,7 @@ export interface PermissionsColumnNames {
   rolePivotKey: string;
   permissionPivotKey: string;
   modelMorphKey: string;
+  modelMorphType: string;
   teamForeignKey: string;
 }
 
@@ -50,6 +53,7 @@ export interface PermissionsSuperAdminConfig {
 
 export interface PermissionsConfig {
   models: PermissionsModelsConfig;
+  morphMap?: PermissionsMorphMapConfig;
   defaultGuard?: string;
   teams?: boolean;
   teamForeignKey?: string;
@@ -65,6 +69,7 @@ export interface PermissionsConfig {
 
 export interface ResolvedPermissionsConfig {
   models: PermissionsModelsConfig;
+  morphMap: PermissionsMorphMapConfig;
   defaultGuard: string;
   teams: boolean;
   teamForeignKey: string;
@@ -136,15 +141,25 @@ export interface HasPermissionsMixin extends HasPermissionsMethods, HasPermissio
 
 export type RoleableProperties = HasPermissionsProperties;
 
-export type RoleableMethods = HasPermissionsMethods;
+export interface RoleableMethods extends HasPermissionsMethods {
+  modelsFor: <T extends LucidModel = LucidModel>(
+    modelOrMorphType: string | T,
+  ) => Promise<InstanceType<T>[]>;
+}
 
-export type RoleableMixin = HasPermissionsMixin;
+export interface RoleableMixin extends RoleableMethods, RoleableProperties {}
 
 export interface PermissibleProperties extends LucidRow {
   roles: ManyToMany<LucidModel>;
 }
 
-export type PermissibleMixin = PermissibleProperties;
+export interface PermissibleMethods {
+  modelsFor: <T extends LucidModel = LucidModel>(
+    modelOrMorphType: string | T,
+  ) => Promise<InstanceType<T>[]>;
+}
+
+export interface PermissibleMixin extends PermissibleMethods, PermissibleProperties {}
 
 export interface HasRolesProperties extends LucidRow {
   roles: ManyToMany<LucidModel>;
@@ -187,7 +202,7 @@ export type Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
 export type Permissible = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
-) => Model & PermissionModelContract & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleProperties>;
+) => Model & PermissionModelContract & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleMixin>;
 
 export type HasPermissions = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,

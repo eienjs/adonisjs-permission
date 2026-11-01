@@ -16,12 +16,14 @@ export default class extends BaseSchema {
         .references('id')
         .inTable('{{ permissionsTable }}')
         .onDelete('CASCADE')
+      table.string('{{ modelMorphType }}').notNullable()
       table.integer('{{ modelMorphKey }}').unsigned().notNullable()
+      table.index(['{{ modelMorphKey }}', '{{ modelMorphType }}'])
 {{#if teams}}
       table.integer('{{ teamForeignKey }}').unsigned().nullable()
-      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}', '{{ teamForeignKey }}'])
+      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}', '{{ modelMorphType }}', '{{ teamForeignKey }}'])
 {{else}}
-      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}'])
+      table.index(['{{ permissionPivotKey }}', '{{ modelMorphKey }}', '{{ modelMorphType }}'])
 {{/if}}
     })
   }

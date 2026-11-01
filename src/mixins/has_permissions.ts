@@ -21,9 +21,16 @@ interface PermissionRelationQueryBuilder {
   ) => Promise<TResult1 | TResult2>;
 }
 
+interface PivotQueryBuilder {
+  wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
+  whereNullPivot: (col: string) => PivotQueryBuilder;
+  whereInPivot: (col: string, vals: (string | number)[]) => PivotQueryBuilder;
+  del: () => Promise<number>;
+}
+
 interface HasPermissionsInternalInstance {
   currentTeamId?: string | number | null;
-  usesTeamPivot?: boolean;
+  usesMorphPivot?: boolean;
   guardName?: string;
   permissions: PermissionInstance[];
   load: (relation: string) => Promise<void>;
@@ -31,6 +38,7 @@ interface HasPermissionsInternalInstance {
     attach: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
     sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
     detach: (ids: (string | number)[]) => Promise<void>;
+    pivotQuery: () => PivotQueryBuilder;
     query: () => PermissionRelationQueryBuilder;
   };
 }
@@ -41,13 +49,13 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
   class ModelWithPermissions extends superclass {
     public currentTeamId?: string | number | null;
 
-    protected usesTeamPivot = true;
+    protected usesMorphPivot = true;
 
     @manyToMany(() => ModelResolver.getInstance().getPermissionModel() as LucidModel, {
       pivotTable: getPivotTableNames().modelHasPermissions,
       pivotForeignKey: getPivotColumnNames().modelMorphKey,
       pivotRelatedForeignKey: getPivotColumnNames().permissionPivotKey,
-      pivotColumns: [getPivotColumnNames().teamForeignKey],
+      pivotColumns: [getPivotColumnNames().modelMorphType, getPivotColumnNames().teamForeignKey],
     })
     public declare permissions: ManyToMany<LucidModel>;
 
@@ -60,8 +68,11 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       const pivotAttributes: Record<string, unknown> = {};
-      if (resolver.config.teams && self.usesTeamPivot !== false) {
-        pivotAttributes[resolver.config.teamForeignKey] = teamId;
+      if (self.usesMorphPivot !== false) {
+        pivotAttributes[resolver.config.columnNames.modelMorphType] = resolver.getMorphType(this.constructor);
+        if (resolver.config.teams) {
+          pivotAttributes[resolver.config.teamForeignKey] = teamId;
+        }
       }
 
       const attachPayload: Record<string | number, Record<string, unknown>> = {};
@@ -97,17 +108,50 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const self = this as unknown as HasPermissionsInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
-      const pivotAttributes: Record<string, unknown> = {};
-      if (resolver.config.teams && self.usesTeamPivot !== false) {
-        pivotAttributes[resolver.config.teamForeignKey] = teamId;
+      if (self.usesMorphPivot === false) {
+        const syncPayload: Record<string | number, Record<string, unknown>> = {};
+        for (const p of permModels) {
+          syncPayload[p.id] = {};
+        }
+
+        await self.related('permissions').sync(syncPayload);
+        this.clearRegistrarCache();
+
+        return;
       }
 
-      const syncPayload: Record<string | number, Record<string, unknown>> = {};
-      for (const p of permModels) {
-        syncPayload[p.id] = pivotAttributes;
+      const morphType = resolver.getMorphType(this.constructor);
+      let pivotQuery = self
+        .related('permissions')
+        .pivotQuery()
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
+      if (resolver.config.teams) {
+        if (teamId === null) {
+          pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
+        } else {
+          pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
+        }
       }
 
-      await self.related('permissions').sync(syncPayload);
+      await pivotQuery.del();
+
+      if (permModels.length > 0) {
+        const pivotAttributes: Record<string, unknown> = {
+          [resolver.config.columnNames.modelMorphType]: morphType,
+        };
+        if (resolver.config.teams) {
+          pivotAttributes[resolver.config.teamForeignKey] = teamId;
+        }
+
+        const syncPayload: Record<string | number, Record<string, unknown>> = {};
+        for (const p of permModels) {
+          syncPayload[p.id] = pivotAttributes;
+        }
+
+        await self.related('permissions').attach(syncPayload);
+      }
+
       this.clearRegistrarCache();
     }
 
@@ -119,7 +163,30 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const self = this as unknown as HasPermissionsInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
-      await self.related('permissions').detach(permModels.map((p) => p.id));
+      if (self.usesMorphPivot === false) {
+        await self.related('permissions').detach(permModels.map((p) => p.id));
+      } else {
+        const morphType = resolver.getMorphType(this.constructor);
+        let pivotQuery = self
+          .related('permissions')
+          .pivotQuery()
+          .wherePivot(resolver.config.columnNames.modelMorphType, morphType)
+          .whereInPivot(
+            resolver.config.columnNames.permissionPivotKey,
+            permModels.map((p) => p.id),
+          );
+
+        if (resolver.config.teams) {
+          if (teamId === null) {
+            pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
+          } else {
+            pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
+          }
+        }
+
+        await pivotQuery.del();
+      }
+
       this.clearRegistrarCache();
 
       if (!resolver.config.events.enabled) {
@@ -149,11 +216,18 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 
       let query = self.related('permissions').query().where('name', targetName);
 
-      if (resolver.config.teams && self.usesTeamPivot !== false) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
+      if (self.usesMorphPivot !== false) {
+        query = query.wherePivot(
+          resolver.config.columnNames.modelMorphType,
+          resolver.getMorphType(this.constructor),
+        );
+
+        if (resolver.config.teams) {
+          if (teamId === null) {
+            query = query.whereNullPivot(resolver.config.teamForeignKey);
+          } else {
+            query = query.wherePivot(resolver.config.teamForeignKey, teamId);
+          }
         }
       }
 
@@ -199,11 +273,18 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       let query = self.related('permissions').query();
-      if (resolver.config.teams && self.usesTeamPivot !== false) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
+      if (self.usesMorphPivot !== false) {
+        query = query.wherePivot(
+          resolver.config.columnNames.modelMorphType,
+          resolver.getMorphType(this.constructor),
+        );
+
+        if (resolver.config.teams) {
+          if (teamId === null) {
+            query = query.whereNullPivot(resolver.config.teamForeignKey);
+          } else {
+            query = query.wherePivot(resolver.config.teamForeignKey, teamId);
+          }
         }
       }
 

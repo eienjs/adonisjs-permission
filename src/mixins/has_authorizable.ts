@@ -69,13 +69,15 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       const targetName = typeof permission === 'string' ? permission : (permission as unknown as { name: string }).name;
       const self = this as unknown as AuthorizableInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
       let query = self
         .related('roles')
         .query()
         .whereHas('permissions', (q) => {
           q.where('name', targetName);
-        });
+        })
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
         if (teamId === null) {
@@ -94,8 +96,14 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       const resolver = ModelResolver.getInstance();
       const self = this as unknown as AuthorizableInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
-      let query = self.related('roles').query().preload('permissions');
+      let query = self
+        .related('roles')
+        .query()
+        .preload('permissions')
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
       if (resolver.config.teams) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);

@@ -9,6 +9,7 @@ export function defineConfig(config: PermissionsConfig): ConfigProvider<Resolved
         role: config.models.role,
         permission: config.models.permission,
       },
+      morphMap: config.morphMap ?? {},
       defaultGuard: config.defaultGuard ?? 'web',
       teams: config.teams ?? false,
       teamForeignKey: config.teamForeignKey ?? 'team_id',
@@ -41,6 +42,7 @@ export function defineConfig(config: PermissionsConfig): ConfigProvider<Resolved
         rolePivotKey: config.columnNames?.rolePivotKey ?? 'role_id',
         permissionPivotKey: config.columnNames?.permissionPivotKey ?? 'permission_id',
         modelMorphKey: config.columnNames?.modelMorphKey ?? 'model_id',
+        modelMorphType: config.columnNames?.modelMorphType ?? 'model_type',
         teamForeignKey: config.columnNames?.teamForeignKey ?? 'team_id',
       },
     };

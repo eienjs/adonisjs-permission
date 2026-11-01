@@ -6,5 +6,4 @@ export const commands = [
   async () => import('./create_permission.js'),
   async () => import('./show.js'),
   async () => import('./cache_reset.js'),
-  async () => import('./pivot_table.js'),
 ];

@@ -1,5 +1,6 @@
 import { test } from '@japa/runner';
 import {
+  Company,
   createDatabase,
   createTables,
   Permission,
@@ -120,5 +121,60 @@ test.group('Authorizable - User Roles and Permissions', (group) => {
       },
       /User does not have the right permissions/,
     );
+  });
+
+  test('polymorphic pivot tables isolate roles and permissions across different models with morphMap', async ({ assert }) => {
+    const user = await User.create({ username: 'dave' });
+    const company = await Company.create({ name: 'Acme Corp' });
+
+    // Both have id = 1 in their respective tables
+    assert.equal(user.id, company.id);
+
+    const adminRole = await Role.findOrCreate({ name: 'admin', guardName: 'web' });
+    const partnerRole = await Role.findOrCreate({ name: 'partner', guardName: 'web' });
+    const billingPerm = await Permission.findOrCreate({ name: 'manage-billing', guardName: 'web' });
+    const apiPerm = await Permission.findOrCreate({ name: 'use-api', guardName: 'web' });
+
+    await user.assignRole('admin');
+    await user.givePermissionTo('manage-billing');
+
+    await company.assignRole('partner');
+    await company.givePermissionTo('use-api');
+
+    // User has admin & manage-billing, NOT partner or use-api
+    assert.isTrue(await user.hasRole('admin'));
+    assert.isFalse(await user.hasRole('partner'));
+    assert.isTrue(await user.hasDirectPermission('manage-billing'));
+    assert.isFalse(await user.hasDirectPermission('use-api'));
+
+    // Company has partner & use-api, NOT admin or manage-billing
+    assert.isTrue(await company.hasRole('partner'));
+    assert.isFalse(await company.hasRole('admin'));
+    assert.isTrue(await company.hasDirectPermission('use-api'));
+    assert.isFalse(await company.hasDirectPermission('manage-billing'));
+
+    // Resolve models from Role and Permission using morphMap alias or class
+    const adminUsers = await adminRole.modelsFor<typeof User>('user');
+    const adminCompanies = await adminRole.modelsFor<typeof Company>('company');
+    assert.lengthOf(adminUsers, 1);
+    assert.equal(adminUsers[0].username, 'dave');
+    assert.lengthOf(adminCompanies, 0);
+
+    const partnerCompanies = await partnerRole.modelsFor(Company);
+    assert.lengthOf(partnerCompanies, 1);
+    assert.equal(partnerCompanies[0].name, 'Acme Corp');
+
+    const billingUsers = await billingPerm.modelsFor<typeof User>('user');
+    const apiCompanies = await apiPerm.modelsFor<typeof Company>('company');
+    assert.lengthOf(billingUsers, 1);
+    assert.equal(billingUsers[0].username, 'dave');
+    assert.lengthOf(apiCompanies, 1);
+    assert.equal(apiCompanies[0].name, 'Acme Corp');
+
+    // Syncing or revoking on User does not affect Company with same id
+    await user.revokeRole('admin');
+    await user.revokePermissionTo('manage-billing');
+    assert.isTrue(await company.hasRole('partner'));
+    assert.isTrue(await company.hasDirectPermission('use-api'));
   });
 });

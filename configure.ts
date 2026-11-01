@@ -31,6 +31,7 @@ export async function configure(command: ConfigureCommand): Promise<void> {
     rolePivotKey: 'role_id',
     permissionPivotKey: 'permission_id',
     modelMorphKey: 'model_id',
+    modelMorphType: 'model_type',
   };
 
   if (!defaults) {
@@ -132,6 +133,7 @@ export async function configure(command: ConfigureCommand): Promise<void> {
       rolesTable: config.rolesTable,
       rolePivotKey: config.rolePivotKey,
       modelMorphKey: config.modelMorphKey,
+      modelMorphType: config.modelMorphType,
       teams: config.teams,
       teamForeignKey: config.teamForeignKey,
     });
@@ -144,6 +146,7 @@ export async function configure(command: ConfigureCommand): Promise<void> {
       permissionsTable: config.permissionsTable,
       permissionPivotKey: config.permissionPivotKey,
       modelMorphKey: config.modelMorphKey,
+      modelMorphType: config.modelMorphType,
       teams: config.teams,
       teamForeignKey: config.teamForeignKey,
     });

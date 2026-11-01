@@ -4,7 +4,7 @@ import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 import type {
   ModelConstructor,
-  PermissibleProperties,
+  PermissibleMixin,
   PermissionModelContract,
   PermissionPropertiesModel,
 } from '../types.js';
@@ -16,7 +16,7 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
   superclass: Model,
 ): Model
   & PermissionModelContract
-  & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleProperties> => {
+  & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleMixin> => {
   class PermissionModel extends superclass {
     @column()
     public declare name: string;
@@ -30,6 +30,32 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
       pivotRelatedForeignKey: getPivotColumnNames().rolePivotKey,
     })
     public declare roles: ManyToMany<LucidModel>;
+
+    public async modelsFor<T extends LucidModel = LucidModel>(
+      modelOrMorphType: string | T,
+    ): Promise<InstanceType<T>[]> {
+      const resolver = ModelResolver.getInstance();
+      const TargetModel = (
+        typeof modelOrMorphType === 'string'
+          ? resolver.getMorphModel(modelOrMorphType)
+          : modelOrMorphType
+      ) as T;
+      const morphType = typeof modelOrMorphType === 'string'
+        ? modelOrMorphType
+        : resolver.getMorphType(TargetModel);
+
+      const { modelHasPermissions } = resolver.config.tableNames;
+      const { permissionPivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
+      const self = this as unknown as { id: string | number };
+
+      return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
+        void subQuery
+          .from(modelHasPermissions)
+          .select(modelMorphKey)
+          .where(permissionPivotKey, self.id)
+          .where(modelMorphType, morphType);
+      });
+    }
 
     public static async findByName(
       this: LucidModel,
@@ -88,5 +114,5 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
 
   return PermissionModel as unknown as Model
     & PermissionModelContract
-    & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleProperties>;
+    & ModelConstructor<InstanceType<Model> & PermissionPropertiesModel & PermissibleMixin>;
 };

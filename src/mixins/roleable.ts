@@ -20,7 +20,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
   const ComposedBase = compose(superclass, HasPermissions) as unknown as typeof BaseModel;
 
   class RoleModel extends ComposedBase {
-    protected usesTeamPivot = false;
+    protected usesMorphPivot = false;
 
     @column()
     public declare name: string;
@@ -37,6 +37,32 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
       pivotRelatedForeignKey: getPivotColumnNames().permissionPivotKey,
     })
     public declare permissions: ManyToMany<LucidModel>;
+
+    public async modelsFor<T extends LucidModel = LucidModel>(
+      modelOrMorphType: string | T,
+    ): Promise<InstanceType<T>[]> {
+      const resolver = ModelResolver.getInstance();
+      const TargetModel = (
+        typeof modelOrMorphType === 'string'
+          ? resolver.getMorphModel(modelOrMorphType)
+          : modelOrMorphType
+      ) as T;
+      const morphType = typeof modelOrMorphType === 'string'
+        ? modelOrMorphType
+        : resolver.getMorphType(TargetModel);
+
+      const { modelHasRoles } = resolver.config.tableNames;
+      const { rolePivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
+      const self = this as unknown as { id: string | number };
+
+      return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
+        void subQuery
+          .from(modelHasRoles)
+          .select(modelMorphKey)
+          .where(rolePivotKey, self.id)
+          .where(modelMorphType, morphType);
+      });
+    }
 
     public static async findByName(
       this: LucidModel,

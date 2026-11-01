@@ -45,6 +45,14 @@ export class User extends compose(BaseModel, HasAuthorizable) {
   public declare username: string;
 }
 
+export class Company extends compose(BaseModel, HasAuthorizable) {
+  @column({ isPrimary: true })
+  public declare id: number;
+
+  @column()
+  public declare name: string;
+}
+
 export const createDatabase = async (app: ApplicationService, dbName = 'db.sqlite3'): Promise<Database> => {
   const dirPath = path.join(process.cwd(), 'tmp');
   await mkdir(dirPath, { recursive: true });
@@ -104,6 +112,7 @@ export const createTables = async (
     await db.connection().schema.dropTableIfExists(permissionsTable);
     await db.connection().schema.dropTableIfExists(rolesTable);
     await db.connection().schema.dropTableIfExists(usersTable);
+    await db.connection().schema.dropTableIfExists('companies');
   };
 
   const activeTest = getActiveTest();
@@ -116,6 +125,12 @@ export const createTables = async (
   await db.connection().schema.createTableIfNotExists(usersTable, (table) => {
     table.increments('id').primary();
     table.string('username').nullable();
+    table.timestamps(true, true);
+  });
+
+  await db.connection().schema.createTableIfNotExists('companies', (table) => {
+    table.increments('id').primary();
+    table.string('name').nullable();
     table.timestamps(true, true);
   });
 
@@ -141,16 +156,16 @@ export const createTables = async (
   });
 
   await db.connection().schema.createTableIfNotExists(modelRolesTable, (table) => {
-    table.increments('id').primary();
     table.integer('role_id').unsigned().references('id').inTable(rolesTable).onDelete('CASCADE');
-    table.integer('model_id').unsigned().references('id').inTable(usersTable).onDelete('CASCADE');
+    table.string('model_type').notNullable();
+    table.integer('model_id').unsigned().notNullable();
     table.string('team_id').nullable();
   });
 
   await db.connection().schema.createTableIfNotExists(modelPermissionsTable, (table) => {
-    table.increments('id').primary();
     table.integer('permission_id').unsigned().references('id').inTable(permissionsTable).onDelete('CASCADE');
-    table.integer('model_id').unsigned().references('id').inTable(usersTable).onDelete('CASCADE');
+    table.string('model_type').notNullable();
+    table.integer('model_id').unsigned().notNullable();
     table.string('team_id').nullable();
   });
 };
@@ -175,6 +190,18 @@ export const setupApp = async (
         await Promise.resolve();
 
         return { default: Permission as unknown as PermissionModelContract };
+      },
+    },
+    morphMap: {
+      user: async () => {
+        await Promise.resolve();
+
+        return { default: User };
+      },
+      company: async () => {
+        await Promise.resolve();
+
+        return { default: Company };
       },
     },
     ...customConfig,
@@ -203,6 +230,11 @@ export const setupApp = async (
   const modelResolver = new ModelResolver(resolvedConfig);
   modelResolver.setRoleModel(Role);
   modelResolver.setPermissionModel(Permission);
+  modelResolver.setMorphMap({
+    user: User,
+    company: Company,
+  });
+  await modelResolver.resolve();
   ModelResolver.setInstance(modelResolver);
 
   const registrar = new PermissionRegistrar(resolvedConfig, modelResolver);

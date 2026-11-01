@@ -21,6 +21,13 @@ interface RoleRelationQueryBuilder {
   ) => Promise<TResult1 | TResult2>;
 }
 
+interface PivotQueryBuilder {
+  wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
+  whereNullPivot: (col: string) => PivotQueryBuilder;
+  whereInPivot: (col: string, vals: (string | number)[]) => PivotQueryBuilder;
+  del: () => Promise<number>;
+}
+
 interface HasRolesInternalInstance {
   currentTeamId?: string | number | null;
   guardName?: string;
@@ -30,6 +37,7 @@ interface HasRolesInternalInstance {
     attach: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
     sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
     detach: (ids: (string | number)[]) => Promise<void>;
+    pivotQuery: () => PivotQueryBuilder;
     query: () => RoleRelationQueryBuilder;
   };
 }
@@ -44,7 +52,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       pivotTable: getPivotTableNames().modelHasRoles,
       pivotForeignKey: getPivotColumnNames().modelMorphKey,
       pivotRelatedForeignKey: getPivotColumnNames().rolePivotKey,
-      pivotColumns: [getPivotColumnNames().teamForeignKey],
+      pivotColumns: [getPivotColumnNames().modelMorphType, getPivotColumnNames().teamForeignKey],
     })
     public declare roles: ManyToMany<LucidModel>;
 
@@ -53,8 +61,11 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const roleModels = await this.resolveRoles(...roles);
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
-      const pivotAttributes: Record<string, unknown> = {};
+      const pivotAttributes: Record<string, unknown> = {
+        [resolver.config.columnNames.modelMorphType]: morphType,
+      };
       if (resolver.config.teams) {
         pivotAttributes[resolver.config.teamForeignKey] = teamId;
       }
@@ -89,18 +100,39 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const roleModels = await this.resolveRoles(...roles);
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
-      const pivotAttributes: Record<string, unknown> = {};
+      let pivotQuery = self
+        .related('roles')
+        .pivotQuery()
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
       if (resolver.config.teams) {
-        pivotAttributes[resolver.config.teamForeignKey] = teamId;
+        if (teamId === null) {
+          pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
+        } else {
+          pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
+        }
       }
 
-      const syncPayload: Record<string | number, Record<string, unknown>> = {};
-      for (const r of roleModels) {
-        syncPayload[r.id] = pivotAttributes;
+      await pivotQuery.del();
+
+      if (roleModels.length > 0) {
+        const pivotAttributes: Record<string, unknown> = {
+          [resolver.config.columnNames.modelMorphType]: morphType,
+        };
+        if (resolver.config.teams) {
+          pivotAttributes[resolver.config.teamForeignKey] = teamId;
+        }
+
+        const syncPayload: Record<string | number, Record<string, unknown>> = {};
+        for (const r of roleModels) {
+          syncPayload[r.id] = pivotAttributes;
+        }
+
+        await self.related('roles').attach(syncPayload);
       }
 
-      await self.related('roles').sync(syncPayload);
       this.clearRegistrarCache();
     }
 
@@ -109,8 +141,26 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const roleModels = await this.resolveRoles(...roles);
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
-      await self.related('roles').detach(roleModels.map((r) => r.id));
+      let pivotQuery = self
+        .related('roles')
+        .pivotQuery()
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType)
+        .whereInPivot(
+          resolver.config.columnNames.rolePivotKey,
+          roleModels.map((r) => r.id),
+        );
+
+      if (resolver.config.teams) {
+        if (teamId === null) {
+          pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
+        } else {
+          pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
+        }
+      }
+
+      await pivotQuery.del();
       this.clearRegistrarCache();
 
       if (!resolver.config.events.enabled) {
@@ -147,9 +197,15 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const resolver = ModelResolver.getInstance();
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
       const targetNames = roles.map((r) => (typeof r === 'string' ? r : (r as unknown as { name: string }).name));
 
-      let query = self.related('roles').query().whereIn('name', targetNames);
+      let query = self
+        .related('roles')
+        .query()
+        .whereIn('name', targetNames)
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
       if (resolver.config.teams) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);
@@ -167,9 +223,15 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const resolver = ModelResolver.getInstance();
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
       const targetNames = roles.map((r) => (typeof r === 'string' ? r : (r as unknown as { name: string }).name));
 
-      let query = self.related('roles').query().whereIn('name', targetNames);
+      let query = self
+        .related('roles')
+        .query()
+        .whereIn('name', targetNames)
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
       if (resolver.config.teams) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);
@@ -198,8 +260,13 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const resolver = ModelResolver.getInstance();
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
+      const morphType = resolver.getMorphType(this.constructor);
 
-      let query = self.related('roles').query();
+      let query = self
+        .related('roles')
+        .query()
+        .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
+
       if (resolver.config.teams) {
         if (teamId === null) {
           query = query.whereNullPivot(resolver.config.teamForeignKey);
