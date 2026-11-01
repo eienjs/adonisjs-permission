@@ -1,33 +1,16 @@
-export interface EdgeBufferContract {
-  writeLine: (text: string) => void;
-}
+import type {
+  EdgeBufferContract,
+  EdgeContract,
+  EdgeParserContract,
+  EdgeTagTokenContract,
+} from '../types/internal.js';
 
-export interface EdgeParserContract {
-  utils: {
-    stringify: (value: unknown) => string;
-  };
-  process: (children: unknown[], buffer: EdgeBufferContract) => void;
-}
-
-export interface EdgeTagTokenContract {
-  properties: {
-    jsArg: unknown;
-  };
-  children: unknown[];
-}
-
-export interface EdgeContract {
-  registerTag: (tag: {
-    block: boolean;
-    seekable: boolean;
-    tagName: string;
-    compile: (
-      parser: EdgeParserContract,
-      buffer: EdgeBufferContract,
-      token: EdgeTagTokenContract,
-    ) => void;
-  }) => void;
-}
+export type {
+  EdgeBufferContract,
+  EdgeContract,
+  EdgeParserContract,
+  EdgeTagTokenContract,
+};
 
 function isEdge(value: unknown): value is EdgeContract {
   return (

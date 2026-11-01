@@ -1,6 +1,6 @@
 import type { Kernel } from '@adonisjs/core/ace';
 import type { ApplicationService } from '@adonisjs/core/types';
-import type { PermissionsConfig } from '../src/types/main.ts';
+import type { PermissionsConfig } from '../src/types/main.js';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';

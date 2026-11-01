@@ -1,4 +1,4 @@
-import type { PermissionInstance, RoleInstance } from '../src/types/main.ts';
+import type { PermissionInstance, RoleInstance } from '../src/types/main.js';
 import { args, BaseCommand } from '@adonisjs/core/ace';
 import { ModelResolver } from '../src/model_resolver.js';
 

@@ -1,9 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http';
+import type { I18nLike } from './types/internal.js';
 import { Exception } from '@adonisjs/core/exceptions';
-
-export interface I18nLike {
-  t: (identifier: string, data?: Record<string, unknown>, fallback?: string) => string;
-}
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export class E_PERMISSION_UNAUTHORIZED_ACCESS extends Exception {

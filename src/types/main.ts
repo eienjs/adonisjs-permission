@@ -1,5 +1,11 @@
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
+import type {
+  PermissionAttachedEvent,
+  PermissionDetachedEvent,
+  RoleAttachedEvent,
+  RoleDetachedEvent,
+} from '../events.js';
 
 /**
  * Supported primary key types for models, teams, and pivots.
@@ -265,6 +271,30 @@ export interface CatalogInspectionResult {
 export interface SyncResult {
   permissions: { created: string[]; pruned: string[]; preserved: string[] };
   roles: { created: string[]; pruned: string[]; preserved: string[]; synced: Record<string, string[]> };
+}
+
+/**
+ * Options for CatalogSyncer execution.
+ */
+export interface SyncOptions {
+  guard?: string;
+  teamId?: PrimaryKeyType | null;
+  prune?: boolean;
+  force?: boolean;
+  confirmHandler?: (items: {
+    roles: { name: string; assignedCount: number }[];
+    permissions: { name: string; assignedCount: number }[];
+  }) => Promise<boolean>;
+}
+
+/**
+ * Permission domain events emitted by AdonisJS event dispatcher.
+ */
+export interface PermissionEvents {
+  'permission:role_attached': RoleAttachedEvent;
+  'permission:role_detached': RoleDetachedEvent;
+  'permission:permission_attached': PermissionAttachedEvent;
+  'permission:permission_detached': PermissionDetachedEvent;
 }
 
 /**

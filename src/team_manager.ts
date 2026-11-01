@@ -1,9 +1,6 @@
+import type { TeamStore } from './types/internal.js';
 import type { PrimaryKeyType } from './types/main.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-
-interface TeamStore {
-  teamId: PrimaryKeyType | null;
-}
 
 export class TeamManager {
   private static instance: TeamManager = new TeamManager();

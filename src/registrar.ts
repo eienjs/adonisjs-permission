@@ -1,17 +1,10 @@
 import type { ModelResolver } from './model_resolver.js';
-import type { ResolvedPermissionsConfig } from './types/internal.js';
+import type { CachedPermissionData, ResolvedPermissionsConfig } from './types/internal.js';
 import type {
   PermissionInstance,
   PrimaryKeyType,
   RoleInstance,
 } from './types/main.js';
-
-export interface CachedPermissionData {
-  id: PrimaryKeyType;
-  name: string;
-  guardName: string;
-  roles: { id: PrimaryKeyType; name: string; guardName: string; teamId?: PrimaryKeyType | null }[];
-}
 
 export class PermissionRegistrar {
   private static instance: PermissionRegistrar | null = null;

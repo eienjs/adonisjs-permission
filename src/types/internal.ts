@@ -126,3 +126,96 @@ export interface InternalAuthorizableInstance {
     query: () => AuthorizableRolesQuery;
   };
 }
+
+/**
+ * Internal database query row result for aggregate COUNT queries.
+ */
+export interface CountRow {
+  total?: string | number;
+}
+
+/**
+ * Internal contract for internationalization service check in HttpContext.
+ */
+export interface I18nLike {
+  t: (identifier: string, data?: Record<string, unknown>, fallback?: string) => string;
+}
+
+/**
+ * Cached permissions data entry structure stored in memory cache.
+ */
+export interface CachedPermissionData {
+  id: PrimaryKeyType;
+  name: string;
+  guardName: string;
+  roles: { id: PrimaryKeyType; name: string; guardName: string; teamId?: PrimaryKeyType | null }[];
+}
+
+/**
+ * AsyncLocalStorage internal team context store.
+ */
+export interface TeamStore {
+  teamId: PrimaryKeyType | null;
+}
+
+/**
+ * Authenticated user object contract expected by permission middlewares.
+ */
+export interface AuthorizableUserContract {
+  hasAnyPermission?: (...permissions: string[]) => Promise<boolean>;
+  hasPermissionTo?: (permission: string) => Promise<boolean>;
+  hasAnyRole?: (...roles: string[]) => Promise<boolean>;
+  hasRole?: (role: string) => Promise<boolean>;
+}
+
+/**
+ * HttpContext authentication state shape.
+ */
+export interface AuthContextLike {
+  auth?: {
+    user?: AuthorizableUserContract;
+  };
+}
+
+/**
+ * Edge template buffer contract.
+ */
+export interface EdgeBufferContract {
+  writeLine: (text: string) => void;
+}
+
+/**
+ * Edge template parser contract.
+ */
+export interface EdgeParserContract {
+  utils: {
+    stringify: (value: unknown) => string;
+  };
+  process: (children: unknown[], buffer: EdgeBufferContract) => void;
+}
+
+/**
+ * Edge tag token contract.
+ */
+export interface EdgeTagTokenContract {
+  properties: {
+    jsArg: unknown;
+  };
+  children: unknown[];
+}
+
+/**
+ * Edge template engine contract for custom tag registration.
+ */
+export interface EdgeContract {
+  registerTag: (tag: {
+    block: boolean;
+    seekable: boolean;
+    tagName: string;
+    compile: (
+      parser: EdgeParserContract,
+      buffer: EdgeBufferContract,
+      token: EdgeTagTokenContract,
+    ) => void;
+  }) => void;
+}

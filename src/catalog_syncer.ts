@@ -1,29 +1,15 @@
 import type { ModelResolver } from './model_resolver.js';
 import type { PermissionRegistrar } from './registrar.js';
-import type { ResolvedPermissionsConfig } from './types/internal.js';
+import type { CountRow, ResolvedPermissionsConfig } from './types/internal.js';
 import type {
   CatalogInspectionResult,
   PermissionInstance,
   PrimaryKeyType,
   RoleInstance,
+  SyncOptions,
   SyncResult,
 } from './types/main.js';
 import { getModelId, normalizeId } from './utils/model_utils.js';
-
-export interface SyncOptions {
-  guard?: string;
-  teamId?: PrimaryKeyType | null;
-  prune?: boolean;
-  force?: boolean;
-  confirmHandler?: (items: {
-    roles: { name: string; assignedCount: number }[];
-    permissions: { name: string; assignedCount: number }[];
-  }) => Promise<boolean>;
-}
-
-interface CountRow {
-  total?: string | number;
-}
 
 export class CatalogSyncer {
   public constructor(

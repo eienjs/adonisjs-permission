@@ -1,6 +1,6 @@
 import type { EmitterService } from '@adonisjs/core/types';
 import type { LucidRow } from '@adonisjs/lucid/types/model';
-import type { PrimaryKeyType } from './types/main.js';
+import type { PermissionEvents, PrimaryKeyType } from './types/main.js';
 
 export class RoleAttachedEvent {
   public constructor(
@@ -32,13 +32,6 @@ export class PermissionDetachedEvent {
     public permission: LucidRow | string,
     public teamId?: PrimaryKeyType | null,
   ) {}
-}
-
-export interface PermissionEvents {
-  'permission:role_attached': RoleAttachedEvent;
-  'permission:role_detached': RoleDetachedEvent;
-  'permission:permission_attached': PermissionAttachedEvent;
-  'permission:permission_detached': PermissionDetachedEvent;
 }
 
 declare module '@adonisjs/core/types' {

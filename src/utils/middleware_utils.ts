@@ -1,19 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http';
+import type { AuthContextLike, AuthorizableUserContract } from '../types/internal.js';
 import { RuntimeException } from '@adonisjs/core/exceptions';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
-
-interface AuthContextLike {
-  auth?: {
-    user?: AuthorizableUserContract;
-  };
-}
-
-export interface AuthorizableUserContract {
-  hasAnyPermission?: (...permissions: string[]) => Promise<boolean>;
-  hasPermissionTo?: (permission: string) => Promise<boolean>;
-  hasAnyRole?: (...roles: string[]) => Promise<boolean>;
-  hasRole?: (role: string) => Promise<boolean>;
-}
 
 /**
  * Extracts and validates authenticated user from HttpContext.

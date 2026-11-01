@@ -1,11 +1,10 @@
 export { configure } from './configure.js';
-export { CatalogSyncer, type SyncOptions } from './src/catalog_syncer.js';
+export { CatalogSyncer } from './src/catalog_syncer.js';
 export { defineConfig } from './src/define_config.js';
 export { E_PERMISSION_UNAUTHORIZED_ACCESS } from './src/errors.js';
 export {
   PermissionAttachedEvent,
   PermissionDetachedEvent,
-  type PermissionEvents,
   RoleAttachedEvent,
   RoleDetachedEvent,
 } from './src/events.js';
@@ -22,5 +21,4 @@ export {
   setPermissionsTeamId,
   TeamManager,
 } from './src/team_manager.js';
-export type * from './src/types.js';
 export { WildcardPermission } from './src/wildcard.js';

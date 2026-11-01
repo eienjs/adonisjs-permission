@@ -26,7 +26,7 @@
   ],
   "exports": {
     ".": "./build/index.js",
-    "./types": "./build/src/types.js",
+    "./types": "./build/src/types/main.js",
     "./commands": "./build/commands/main.js",
     "./permissions_provider": "./build/providers/permissions_provider.js",
     "./role_middleware": "./build/middleware/role_middleware.js",

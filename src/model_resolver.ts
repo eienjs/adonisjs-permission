@@ -5,7 +5,7 @@ import type {
   PermissionsColumnNames,
   PermissionsTableNames,
   RoleModelContract,
-} from './types/main.ts';
+} from './types/main.js';
 import stringHelpers from '@adonisjs/core/helpers/string';
 
 export const DEFAULT_TABLE_NAMES: PermissionsTableNames = {
