@@ -39,7 +39,9 @@ test.group('Authorizable - User Roles and Permissions', (group) => {
 
     // hasExactRoles
     assert.isTrue(await user.hasExactRoles('editor', 'admin'));
+    assert.isTrue(await user.hasExactRoles('editor', 'admin', 'admin'));
     assert.isFalse(await user.hasExactRoles('admin'));
+    assert.isFalse(await user.hasExactRoles('admin', 'admin'));
 
     // getRoleNames
     const roleNames = await user.getRoleNames();

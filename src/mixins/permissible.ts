@@ -18,6 +18,7 @@ import {
   ModelResolver,
   normalizeId,
 } from '../model_resolver.js';
+import { resolveModelsForMorphPivot } from '../utils/pivot_utils.js';
 
 export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
@@ -52,17 +53,18 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
         : resolver.getMorphType(TargetModel);
 
       const { modelHasPermissions } = resolver.config.tableNames;
-      const { permissionPivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
+      const { permissionPivotKey, modelMorphKey, modelMorphType: morphCol } = resolver.config.columnNames;
       const self = this as unknown as { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType };
-      const permissionId = normalizeId(getModelId(self));
 
-      return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
-        void subQuery
-          .from(modelHasPermissions)
-          .select(modelMorphKey)
-          .where(permissionPivotKey, permissionId)
-          .where(modelMorphType, morphType);
-      });
+      return resolveModelsForMorphPivot(
+        TargetModel,
+        morphType,
+        modelHasPermissions,
+        permissionPivotKey,
+        getModelId(self),
+        modelMorphKey,
+        morphCol,
+      );
     }
 
     public static async findByName(

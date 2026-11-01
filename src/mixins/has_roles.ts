@@ -14,14 +14,8 @@ import { emitEvent, RoleAttachedEvent, RoleDetachedEvent } from '../events.js';
 import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
 import { PermissionRegistrar } from '../registrar.js';
 import { getPermissionsTeamId } from '../team_manager.js';
-
-function getModelId(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): PrimaryKeyType {
-  return model.$primaryKeyValue ?? model.id;
-}
-
-function toRecordKey(id: PrimaryKeyType): string | number {
-  return typeof id === 'bigint' ? id.toString() : id;
-}
+import { getModelId, resolveTargetNames } from '../utils/model_utils.js';
+import { applyTeamPivotScope, buildMorphPivotPayload } from '../utils/pivot_utils.js';
 
 interface RoleRelationQueryBuilder {
   whereIn: (col: string, values: unknown[]) => RoleRelationQueryBuilder;
@@ -80,17 +74,14 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
-      const pivotAttributes: Record<string, unknown> = {
-        [resolver.config.columnNames.modelMorphType]: morphType,
-      };
-      if (resolver.config.teams) {
-        pivotAttributes[resolver.config.teamForeignKey] = teamId;
-      }
-
-      const attachPayload: Record<string | number, Record<string, unknown>> = {};
-      for (const r of roleModels) {
-        attachPayload[toRecordKey(getModelId(r))] = pivotAttributes;
-      }
+      const attachPayload = buildMorphPivotPayload(
+        roleModels,
+        morphType,
+        teamId,
+        resolver.config.teams,
+        resolver.config.teamForeignKey,
+        resolver.config.columnNames.modelMorphType,
+      );
 
       await self.related('roles').attach(attachPayload);
       this.clearRegistrarCache();
@@ -125,27 +116,20 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        pivotQuery = applyTeamPivotScope(pivotQuery, teamId, resolver.config.teamForeignKey);
       }
 
       await pivotQuery.del();
 
       if (roleModels.length > 0) {
-        const pivotAttributes: Record<string, unknown> = {
-          [resolver.config.columnNames.modelMorphType]: morphType,
-        };
-        if (resolver.config.teams) {
-          pivotAttributes[resolver.config.teamForeignKey] = teamId;
-        }
-
-        const syncPayload: Record<string | number, Record<string, unknown>> = {};
-        for (const r of roleModels) {
-          syncPayload[toRecordKey(getModelId(r))] = pivotAttributes;
-        }
+        const syncPayload = buildMorphPivotPayload(
+          roleModels,
+          morphType,
+          teamId,
+          resolver.config.teams,
+          resolver.config.teamForeignKey,
+          resolver.config.columnNames.modelMorphType,
+        );
 
         await self.related('roles').attach(syncPayload);
       }
@@ -174,11 +158,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         );
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          pivotQuery = pivotQuery.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          pivotQuery = pivotQuery.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        pivotQuery = applyTeamPivotScope(pivotQuery, teamId, resolver.config.teamForeignKey);
       }
 
       await pivotQuery.del();
@@ -219,7 +199,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
-      const targetNames = roles.map((r) => (typeof r === 'string' ? r : (r as unknown as { name: string }).name));
+      const targetNames = resolveTargetNames(roles);
 
       let query = self
         .related('roles')
@@ -228,11 +208,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        query = applyTeamPivotScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const found = await query.first();
@@ -245,7 +221,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
-      const targetNames = roles.map((r) => (typeof r === 'string' ? r : (r as unknown as { name: string }).name));
+      const targetNames = resolveTargetNames(roles);
 
       let query = self
         .related('roles')
@@ -254,11 +230,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        query = applyTeamPivotScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const foundRoles = await query;
@@ -268,13 +240,21 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public async hasExactRoles(...roles: (string | LucidRow)[]): Promise<boolean> {
       const currentNames = await this.getRoleNames();
-      const targetNames = roles.map((r) => (typeof r === 'string' ? r : (r as unknown as { name: string }).name));
+      const targetNames = resolveTargetNames(roles);
+      const currentSet = new Set(currentNames);
+      const targetSet = new Set(targetNames);
 
-      if (currentNames.length !== targetNames.length) {
+      if (currentSet.size !== targetSet.size) {
         return false;
       }
 
-      return targetNames.every((t) => currentNames.includes(t));
+      for (const name of targetSet) {
+        if (!currentSet.has(name)) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     public async getRoleNames(): Promise<string[]> {
@@ -289,11 +269,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        query = applyTeamPivotScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const roles = await query;

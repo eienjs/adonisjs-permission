@@ -6,6 +6,10 @@ export class WildcardPermission {
   public static readonly WILDCARD_TOKEN = '*';
 
   public static implies(assigned: string, required: string): boolean {
+    if (!assigned || !required) {
+      return false;
+    }
+
     if (assigned === required || assigned === this.WILDCARD_TOKEN) {
       return true;
     }

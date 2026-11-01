@@ -19,6 +19,7 @@ import {
   ModelResolver,
   normalizeId,
 } from '../model_resolver.js';
+import { applyTeamScope, resolveModelsForMorphPivot } from '../utils/pivot_utils.js';
 import { HasPermissions } from './has_permissions.js';
 
 export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
@@ -59,17 +60,18 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
         : resolver.getMorphType(TargetModel);
 
       const { modelHasRoles } = resolver.config.tableNames;
-      const { rolePivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
+      const { rolePivotKey, modelMorphKey, modelMorphType: morphCol } = resolver.config.columnNames;
       const self = this as unknown as { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType };
-      const roleId = normalizeId(getModelId(self));
 
-      return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
-        void subQuery
-          .from(modelHasRoles)
-          .select(modelMorphKey)
-          .where(rolePivotKey, roleId)
-          .where(modelMorphType, morphType);
-      });
+      return resolveModelsForMorphPivot(
+        TargetModel,
+        morphType,
+        modelHasRoles,
+        rolePivotKey,
+        getModelId(self),
+        modelMorphKey,
+        morphCol,
+      );
     }
 
     public static async findByName(
@@ -83,11 +85,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
       let query = this.query().where('name', name).where('guard_name', guard);
 
       if (resolver.config.teams) {
-        if (teamId === undefined || teamId === null) {
-          query = query.whereNull(resolver.config.teamForeignKey);
-        } else {
-          query = query.where(resolver.config.teamForeignKey, normalizeId(teamId));
-        }
+        query = applyTeamScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const role = await query.first();
@@ -109,11 +107,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
       let query = this.query().where(this.primaryKey, normalizeId(id)).where('guard_name', guard);
 
       if (resolver.config.teams) {
-        if (teamId === undefined || teamId === null) {
-          query = query.whereNull(resolver.config.teamForeignKey);
-        } else {
-          query = query.where(resolver.config.teamForeignKey, normalizeId(teamId));
-        }
+        query = applyTeamScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const role = await query.first();
@@ -141,11 +135,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
       let query = this.query().where('name', values.name).where('guard_name', guard);
 
       if (resolver.config.teams) {
-        if (values.teamId === undefined || values.teamId === null) {
-          query = query.whereNull(resolver.config.teamForeignKey);
-        } else {
-          query = query.where(resolver.config.teamForeignKey, normalizeId(values.teamId));
-        }
+        query = applyTeamScope(query, values.teamId, resolver.config.teamForeignKey);
       }
 
       let role = await query.first();

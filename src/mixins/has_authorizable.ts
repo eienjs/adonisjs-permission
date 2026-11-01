@@ -12,6 +12,7 @@ import { compose } from '@adonisjs/core/helpers';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
 import { getModelId, ModelResolver, normalizeId } from '../model_resolver.js';
 import { getPermissionsTeamId } from '../team_manager.js';
+import { applyTeamPivotScope } from '../utils/pivot_utils.js';
 import { WildcardPermission } from '../wildcard.js';
 import { HasPermissions } from './has_permissions.js';
 import { HasRoles } from './has_roles.js';
@@ -79,11 +80,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        query = applyTeamPivotScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const found = await query.first();
@@ -103,11 +100,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
-        if (teamId === null) {
-          query = query.whereNullPivot(resolver.config.teamForeignKey);
-        } else {
-          query = query.wherePivot(resolver.config.teamForeignKey, teamId);
-        }
+        query = applyTeamPivotScope(query, teamId, resolver.config.teamForeignKey);
       }
 
       const roles = await query;
@@ -210,6 +203,48 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
 
     public async cannot(permission: string | LucidRow): Promise<boolean> {
       return !(await this.can(permission));
+    }
+
+    public async hasAnyPermission(...permissions: (string | LucidRow)[]): Promise<boolean> {
+      const resolver = ModelResolver.getInstance();
+      const self = this as unknown as AuthorizableInternalInstance;
+
+      if (
+        resolver.config.superAdmin.enabled
+        && resolver.config.superAdmin.role
+        && (await self.hasRole(resolver.config.superAdmin.role))
+      ) {
+        return true;
+      }
+
+      for (const p of permissions) {
+        if (await this.hasPermissionTo(p)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    public async hasAllPermissions(...permissions: (string | LucidRow)[]): Promise<boolean> {
+      const resolver = ModelResolver.getInstance();
+      const self = this as unknown as AuthorizableInternalInstance;
+
+      if (
+        resolver.config.superAdmin.enabled
+        && resolver.config.superAdmin.role
+        && (await self.hasRole(resolver.config.superAdmin.role))
+      ) {
+        return true;
+      }
+
+      for (const p of permissions) {
+        if (!(await this.hasPermissionTo(p))) {
+          return false;
+        }
+      }
+
+      return true;
     }
   }
 

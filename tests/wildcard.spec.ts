@@ -36,6 +36,10 @@ test.group('Wildcard Permissions', () => {
     assert.isTrue(WildcardPermission.implies('posts', 'posts.edit'));
     assert.isFalse(WildcardPermission.implies('posts.edit', 'posts'));
     assert.isTrue(WildcardPermission.implies('posts.*', 'posts.edit.sub'));
+
+    // Edge cases
+    assert.isFalse(WildcardPermission.implies('', 'posts.edit'));
+    assert.isFalse(WildcardPermission.implies('posts.edit', ''));
   });
 
   test('user evaluation with wildcard permission enabled in config', async ({ assert }) => {

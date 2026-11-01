@@ -19,7 +19,7 @@ export default class ShowPermissionsCommand extends BaseCommand {
     const Role = resolver.getRoleModel();
     const Permission = resolver.getPermissionModel();
 
-    let roleQuery = Role.query();
+    let roleQuery = Role.query().preload('permissions');
     let permQuery = Permission.query();
 
     if (this.guard) {
@@ -47,7 +47,10 @@ export default class ShowPermissionsCommand extends BaseCommand {
       const roleTable = this.ui.table();
       roleTable.head(['ID', 'Name', 'Guard', 'Permissions']);
       for (const r of roles) {
-        const permNames = await r.getPermissionNames();
+        const preloaded = (r as unknown as { permissions?: { name: string }[] }).permissions;
+        const permNames = Array.isArray(preloaded)
+          ? preloaded.map((p) => p.name)
+          : await r.getPermissionNames();
         const permsList = permNames.join(', ') || '(none)';
         roleTable.row([String(r.id), r.name, r.guardName ?? 'web', permsList]);
       }
