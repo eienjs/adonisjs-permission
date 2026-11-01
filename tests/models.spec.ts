@@ -21,10 +21,10 @@ test.group('Models - Role and Permission', (group) => {
     assert.equal(role.guardName, 'web');
 
     const foundByName = await Role.findByName('writer', 'web');
-    assert.equal(foundByName!.id, role.id);
+    assert.equal(foundByName.id, role.id);
 
     const foundById = await Role.findById(role.id);
-    assert.equal(foundById!.name, 'writer');
+    assert.equal(foundById.name, 'writer');
   });
 
   test('can create permission and find by name and id', async ({ assert }) => {
@@ -34,10 +34,10 @@ test.group('Models - Role and Permission', (group) => {
     assert.equal(permission.guardName, 'web');
 
     const foundByName = await Permission.findByName('edit-posts', 'web');
-    assert.equal(foundByName!.id, permission.id);
+    assert.equal(foundByName.id, permission.id);
 
     const foundById = await Permission.findById(permission.id);
-    assert.equal(foundById!.name, 'edit-posts');
+    assert.equal(foundById.name, 'edit-posts');
   });
 
   test('throws 404 when role or permission not found', async ({ assert }) => {

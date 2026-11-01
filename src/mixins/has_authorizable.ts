@@ -5,15 +5,20 @@ import type {
   HasAuthorizableMixin,
   ModelConstructor,
   PermissionInstance,
+  PrimaryKeyType,
   RoleInstance,
 } from '../types.js';
 import { compose } from '@adonisjs/core/helpers';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
-import { ModelResolver } from '../model_resolver.js';
+import { getModelId, ModelResolver, normalizeId } from '../model_resolver.js';
 import { getPermissionsTeamId } from '../team_manager.js';
 import { WildcardPermission } from '../wildcard.js';
 import { HasPermissions } from './has_permissions.js';
 import { HasRoles } from './has_roles.js';
+
+function getModelIdKey(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): string {
+  return String(getModelId(model));
+}
 
 interface AuthorizableWhereHasQuery {
   wherePivot: (col: string, val: unknown) => AuthorizableWhereHasQuery;
@@ -21,33 +26,27 @@ interface AuthorizableWhereHasQuery {
   first: () => Promise<LucidRow | null>;
 }
 
-interface AuthorizablePreloadQuery {
-  wherePivot: (col: string, val: unknown) => AuthorizablePreloadQuery;
-  whereNullPivot: (col: string) => AuthorizablePreloadQuery;
-  then: <TResult1 = (RoleInstance & { permissions: PermissionInstance[] })[], TResult2 = never>(
-    onfulfilled?:
-      | ((
-        value: (RoleInstance & { permissions: PermissionInstance[] })[],
-      ) => TResult1 | PromiseLike<TResult1>)
-      | null,
+interface AuthorizableRolesQuery {
+  wherePivot: (col: string, val: unknown) => AuthorizableRolesQuery;
+  whereNullPivot: (col: string) => AuthorizableRolesQuery;
+  whereHas: (
+    rel: string,
+    callback: (q: { where: (col: string, val: unknown) => void }) => void,
+  ) => AuthorizableWhereHasQuery;
+  then: <TResult1 = RoleInstance[], TResult2 = never>(
+    onfulfilled?: ((value: RoleInstance[]) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ) => Promise<TResult1 | TResult2>;
 }
 
 interface AuthorizableInternalInstance {
-  currentTeamId?: string | number | null;
+  currentTeamId?: PrimaryKeyType | null;
   guardName?: string;
   hasRole: (role: string) => Promise<boolean>;
   hasDirectPermission: (permission: string | LucidRow) => Promise<boolean>;
   getDirectPermissions: () => Promise<LucidRow[]>;
   related: (relation: string) => {
-    query: () => {
-      whereHas: (
-        rel: string,
-        callback: (q: { where: (col: string, val: unknown) => void }) => void,
-      ) => AuthorizableWhereHasQuery;
-      preload: (rel: string) => AuthorizablePreloadQuery;
-    };
+    query: () => AuthorizableRolesQuery;
   };
 }
 
@@ -56,9 +55,9 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
 ): Model & ModelConstructor<InstanceType<Model> & HasAuthorizableMixin> => {
   const ComposedBase = compose(superclass, HasRoles, HasPermissions) as unknown as typeof BaseModel;
   class ModelWithAuthorizable extends ComposedBase {
-    public currentTeamId?: string | number | null;
+    public currentTeamId?: PrimaryKeyType | null;
 
-    public forTeam(teamId: string | number | null): this {
+    public forTeam(teamId: PrimaryKeyType | null): this {
       this.currentTeamId = teamId;
 
       return this;
@@ -101,7 +100,6 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       let query = self
         .related('roles')
         .query()
-        .preload('permissions')
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType);
 
       if (resolver.config.teams) {
@@ -113,20 +111,21 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       }
 
       const roles = await query;
-      const perms: PermissionInstance[] = [];
-      const seen = new Set<string | number>();
-
-      for (const role of roles) {
-        const rolePerms = role.permissions;
-        for (const perm of rolePerms) {
-          if (seen.has(perm.id)) {
-            continue;
-          }
-
-          seen.add(perm.id);
-          perms.push(perm);
-        }
+      if (roles.length === 0) {
+        return [];
       }
+
+      const Permission = resolver.getPermissionModel();
+      const { roleHasPermissions } = resolver.config.tableNames;
+      const { rolePivotKey, permissionPivotKey } = resolver.config.columnNames;
+      const roleIds = roles.map((r) => normalizeId(getModelId(r)));
+
+      const perms = await Permission.query().whereIn(Permission.primaryKey, (subQuery) => {
+        void subQuery
+          .from(roleHasPermissions)
+          .select(permissionPivotKey)
+          .whereIn(rolePivotKey, roleIds);
+      });
 
       return perms;
     }
@@ -137,14 +136,15 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
       const viaRoles = (await this.getPermissionsViaRoles()) as unknown as PermissionInstance[];
 
       const combined: PermissionInstance[] = [...direct];
-      const seen = new Set(direct.map((p) => p.id));
+      const seen = new Set(direct.map((p) => getModelIdKey(p)));
 
       for (const perm of viaRoles) {
-        if (seen.has(perm.id)) {
+        const key = getModelIdKey(perm);
+        if (seen.has(key)) {
           continue;
         }
 
-        seen.add(perm.id);
+        seen.add(key);
         combined.push(perm);
       }
 

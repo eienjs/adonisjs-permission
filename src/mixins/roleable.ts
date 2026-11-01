@@ -4,6 +4,7 @@ import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 import type {
   ModelConstructor,
+  PrimaryKeyType,
   RoleableMixin,
   RoleModelContract,
   RolePropertiesModel,
@@ -11,7 +12,13 @@ import type {
 import { compose } from '@adonisjs/core/helpers';
 import { column, manyToMany } from '@adonisjs/lucid/orm';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
-import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
+import {
+  getModelId,
+  getPivotColumnNames,
+  getPivotTableNames,
+  ModelResolver,
+  normalizeId,
+} from '../model_resolver.js';
 import { HasPermissions } from './has_permissions.js';
 
 export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
@@ -29,7 +36,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
     public declare guardName: string;
 
     @column({ columnName: getPivotColumnNames().teamForeignKey })
-    public declare teamId: string | number | null;
+    public declare teamId: PrimaryKeyType | null;
 
     @manyToMany(() => ModelResolver.getInstance().getPermissionModel() as LucidModel, {
       pivotTable: getPivotTableNames().roleHasPermissions,
@@ -53,13 +60,14 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
       const { modelHasRoles } = resolver.config.tableNames;
       const { rolePivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
-      const self = this as unknown as { id: string | number };
+      const self = this as unknown as { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType };
+      const roleId = normalizeId(getModelId(self));
 
       return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
         void subQuery
           .from(modelHasRoles)
           .select(modelMorphKey)
-          .where(rolePivotKey, self.id)
+          .where(rolePivotKey, roleId)
           .where(modelMorphType, morphType);
       });
     }
@@ -68,7 +76,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
       this: LucidModel,
       name: string,
       guardName?: string,
-      teamId?: string | number | null,
+      teamId?: PrimaryKeyType | null,
     ): Promise<LucidRow> {
       const resolver = ModelResolver.getInstance();
       const guard = guardName ?? resolver.config.defaultGuard;
@@ -78,7 +86,7 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
         if (teamId === undefined || teamId === null) {
           query = query.whereNull(resolver.config.teamForeignKey);
         } else {
-          query = query.where(resolver.config.teamForeignKey, teamId);
+          query = query.where(resolver.config.teamForeignKey, normalizeId(teamId));
         }
       }
 
@@ -92,19 +100,19 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public static async findById(
       this: LucidModel,
-      id: number | string,
+      id: PrimaryKeyType,
       guardName?: string,
-      teamId?: string | number | null,
+      teamId?: PrimaryKeyType | null,
     ): Promise<LucidRow> {
       const resolver = ModelResolver.getInstance();
       const guard = guardName ?? resolver.config.defaultGuard;
-      let query = this.query().where('id', id).where('guard_name', guard);
+      let query = this.query().where(this.primaryKey, normalizeId(id)).where('guard_name', guard);
 
       if (resolver.config.teams) {
         if (teamId === undefined || teamId === null) {
           query = query.whereNull(resolver.config.teamForeignKey);
         } else {
-          query = query.where(resolver.config.teamForeignKey, teamId);
+          query = query.where(resolver.config.teamForeignKey, normalizeId(teamId));
         }
       }
 
@@ -121,7 +129,12 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public static async findOrCreate(
       this: LucidModel,
-      values: { name: string; guardName?: string; teamId?: string | number | null },
+      values: {
+        name: string;
+        guardName?: string;
+        teamId?: PrimaryKeyType | null;
+        [key: string]: unknown;
+      },
     ): Promise<LucidRow> {
       const resolver = ModelResolver.getInstance();
       const guard = values.guardName ?? resolver.config.defaultGuard;
@@ -131,19 +144,21 @@ export const Roleable = <Model extends NormalizeConstructor<typeof BaseModel>>(
         if (values.teamId === undefined || values.teamId === null) {
           query = query.whereNull(resolver.config.teamForeignKey);
         } else {
-          query = query.where(resolver.config.teamForeignKey, values.teamId);
+          query = query.where(resolver.config.teamForeignKey, normalizeId(values.teamId));
         }
       }
 
       let role = await query.first();
       if (!role) {
+        const { name, guardName: _guardName, teamId, ...rest } = values;
         const payload: { name: string; guardName: string; [key: string]: unknown } = {
-          name: values.name,
+          ...rest,
+          name,
           guardName: guard,
         };
-        if (resolver.config.teams && values.teamId !== undefined && values.teamId !== null) {
-          payload[resolver.config.teamForeignKey] = values.teamId;
-          payload.teamId = values.teamId;
+        if (teamId !== undefined && teamId !== null && resolver.config.teams) {
+          payload[resolver.config.teamForeignKey] = teamId;
+          payload.teamId = teamId;
         }
         role = await this.create(payload);
       }

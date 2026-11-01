@@ -27,8 +27,8 @@ test.group('Multiple Guards', (group) => {
     const foundWeb = await Role.findByName('admin', 'web');
     const foundApi = await Role.findByName('admin', 'api');
 
-    assert.equal(foundWeb!.id, webAdmin.id);
-    assert.equal(foundApi!.id, apiAdmin.id);
+    assert.equal(foundWeb.id, webAdmin.id);
+    assert.equal(foundApi.id, apiAdmin.id);
   });
 
   test('permissions can exist with same name across different guards', async ({ assert }) => {
@@ -40,7 +40,7 @@ test.group('Multiple Guards', (group) => {
     const foundWeb = await Permission.findByName('edit-posts', 'web');
     const foundApi = await Permission.findByName('edit-posts', 'api');
 
-    assert.equal(foundWeb!.id, webPerm.id);
-    assert.equal(foundApi!.id, apiPerm.id);
+    assert.equal(foundWeb.id, webPerm.id);
+    assert.equal(foundApi.id, apiPerm.id);
   });
 });

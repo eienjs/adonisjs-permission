@@ -1,10 +1,6 @@
 import type { Kernel } from '@adonisjs/core/ace';
 import type { ApplicationService } from '@adonisjs/core/types';
-import type {
-  PermissionModelContract,
-  PermissionsConfig,
-  RoleModelContract,
-} from '../src/types.js';
+import type { PermissionsConfig } from '../src/types.js';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -184,12 +180,12 @@ export const setupApp = async (
       role: async () => {
         await Promise.resolve();
 
-        return { default: Role as unknown as RoleModelContract };
+        return { default: Role };
       },
       permission: async () => {
         await Promise.resolve();
 
-        return { default: Permission as unknown as PermissionModelContract };
+        return { default: Permission };
       },
     },
     morphMap: {

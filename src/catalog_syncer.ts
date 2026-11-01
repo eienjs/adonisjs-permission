@@ -1,17 +1,18 @@
-import type { LucidRow } from '@adonisjs/lucid/types/model';
 import type { ModelResolver } from './model_resolver.js';
 import type { PermissionRegistrar } from './registrar.js';
 import type {
   CatalogInspectionResult,
   PermissionInstance,
+  PrimaryKeyType,
   ResolvedPermissionsConfig,
   RoleInstance,
   SyncResult,
 } from './types.js';
+import { getModelId, normalizeId } from './model_resolver.js';
 
 export interface SyncOptions {
   guard?: string;
-  teamId?: string | number | null;
+  teamId?: PrimaryKeyType | null;
   prune?: boolean;
   force?: boolean;
   confirmHandler?: (items: {
@@ -33,7 +34,7 @@ export class CatalogSyncer {
 
   public async inspect(options?: {
     guard?: string;
-    teamId?: string | number | null;
+    teamId?: PrimaryKeyType | null;
   }): Promise<CatalogInspectionResult> {
     const guard = options?.guard ?? this.config.defaultGuard;
     const teamId = options?.teamId ?? null;
@@ -62,27 +63,29 @@ export class CatalogSyncer {
     const missingPermissions = catalogPermissions.filter((p) => !dbPermNames.has(p));
 
     const obsoletePermModels = dbPermissions.filter((p) => !catalogPermsSet.has(p.name));
-    const obsoletePermissions: { id: number | string; name: string; assignedCount: number }[] = [];
+    const obsoletePermissions: { id: PrimaryKeyType; name: string; assignedCount: number }[] = [];
 
     const modelHasPermsTable = this.config.tableNames.modelHasPermissions;
     const roleHasPermsTable = this.config.tableNames.roleHasPermissions;
     const permPivotKey = this.config.columnNames.permissionPivotKey;
 
     for (const perm of obsoletePermModels) {
+      const permId = getModelId(perm);
+      const normalizedPermId = normalizeId(permId);
       const modelAssignments = (await client
         .from(modelHasPermsTable)
-        .where(permPivotKey, perm.id)
+        .where(permPivotKey, normalizedPermId)
         .count('* as total')) as CountRow[];
       const roleAssignments = (await client
         .from(roleHasPermsTable)
-        .where(permPivotKey, perm.id)
+        .where(permPivotKey, normalizedPermId)
         .count('* as total')) as CountRow[];
 
       const modelCount = Number(modelAssignments[0]?.total ?? 0);
       const roleCount = Number(roleAssignments[0]?.total ?? 0);
 
       obsoletePermissions.push({
-        id: perm.id,
+        id: permId,
         name: perm.name,
         assignedCount: modelCount + roleCount,
       });
@@ -94,29 +97,28 @@ export class CatalogSyncer {
       if (teamId === null) {
         roleQuery = roleQuery.whereNull(this.config.teamForeignKey);
       } else {
-        roleQuery = roleQuery.where(this.config.teamForeignKey, teamId);
+        roleQuery = roleQuery.where(this.config.teamForeignKey, normalizeId(teamId));
       }
     }
-    const dbRoles = (await roleQuery) as unknown as (RoleInstance & {
-      permissions?: PermissionInstance[];
-    })[];
+    const dbRoles = (await roleQuery) as unknown as RoleInstance[];
     const dbRoleNames = new Set(dbRoles.map((r) => r.name));
 
     const missingRoles = catalogRoles.filter((r) => !dbRoleNames.has(r));
     const obsoleteRoleModels = dbRoles.filter((r) => !catalogRoles.includes(r.name));
-    const obsoleteRoles: { id: number | string; name: string; assignedCount: number }[] = [];
+    const obsoleteRoles: { id: PrimaryKeyType; name: string; assignedCount: number }[] = [];
 
     const modelHasRolesTable = this.config.tableNames.modelHasRoles;
     const { rolePivotKey } = this.config.columnNames;
 
     for (const role of obsoleteRoleModels) {
+      const roleId = getModelId(role);
       const modelAssignments = (await client
         .from(modelHasRolesTable)
-        .where(rolePivotKey, role.id)
+        .where(rolePivotKey, normalizeId(roleId))
         .count('* as total')) as CountRow[];
       const count = Number(modelAssignments[0]?.total ?? 0);
       obsoleteRoles.push({
-        id: role.id,
+        id: roleId,
         name: role.name,
         assignedCount: count,
       });
@@ -137,9 +139,7 @@ export class CatalogSyncer {
       }
 
       const targetPermissions = this.config.catalog.roles[roleName];
-      await (roleModel as LucidRow).load('permissions' as never);
-      const currentPerms = roleModel.permissions as unknown as PermissionInstance[];
-      const currentPermNames = currentPerms.map((p) => p.name);
+      const currentPermNames = await roleModel.getPermissionNames();
       const toAttach = targetPermissions.filter((p) => !currentPermNames.includes(p));
       const toDetach = currentPermNames.filter((p) => !targetPermissions.includes(p));
 

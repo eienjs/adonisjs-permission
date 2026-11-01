@@ -3,12 +3,25 @@ import type { NormalizeConstructor } from '@adonisjs/core/types/helpers';
 import type { BaseModel } from '@adonisjs/lucid/orm';
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
-import type { HasRolesMixin, ModelConstructor, RoleInstance } from '../types.js';
+import type {
+  HasRolesMixin,
+  ModelConstructor,
+  PrimaryKeyType,
+  RoleInstance,
+} from '../types.js';
 import { manyToMany } from '@adonisjs/lucid/orm';
 import { emitEvent, RoleAttachedEvent, RoleDetachedEvent } from '../events.js';
 import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
 import { PermissionRegistrar } from '../registrar.js';
 import { getPermissionsTeamId } from '../team_manager.js';
+
+function getModelId(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): PrimaryKeyType {
+  return model.$primaryKeyValue ?? model.id;
+}
+
+function toRecordKey(id: PrimaryKeyType): string | number {
+  return typeof id === 'bigint' ? id.toString() : id;
+}
 
 interface RoleRelationQueryBuilder {
   whereIn: (col: string, values: unknown[]) => RoleRelationQueryBuilder;
@@ -24,19 +37,19 @@ interface RoleRelationQueryBuilder {
 interface PivotQueryBuilder {
   wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
   whereNullPivot: (col: string) => PivotQueryBuilder;
-  whereInPivot: (col: string, vals: (string | number)[]) => PivotQueryBuilder;
+  whereInPivot: (col: string, vals: PrimaryKeyType[]) => PivotQueryBuilder;
   del: () => Promise<number>;
 }
 
 interface HasRolesInternalInstance {
-  currentTeamId?: string | number | null;
+  currentTeamId?: PrimaryKeyType | null;
   guardName?: string;
   roles: RoleInstance[];
   load: (relation: string) => Promise<void>;
   related: (relation: string) => {
-    attach: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
+    attach: (payload: Record<string | number, Record<string, unknown>> | (string | number)[]) => Promise<void>;
     sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
-    detach: (ids: (string | number)[]) => Promise<void>;
+    detach: (ids?: (string | number)[]) => Promise<void>;
     pivotQuery: () => PivotQueryBuilder;
     query: () => RoleRelationQueryBuilder;
   };
@@ -46,7 +59,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
 ): Model & ModelConstructor<InstanceType<Model> & HasRolesMixin> => {
   class ModelWithRoles extends superclass {
-    public currentTeamId?: string | number | null;
+    public currentTeamId?: PrimaryKeyType | null;
 
     @manyToMany(() => ModelResolver.getInstance().getRoleModel() as LucidModel, {
       pivotTable: getPivotTableNames().modelHasRoles,
@@ -59,6 +72,10 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
     public async assignRole(...roles: (string | LucidRow)[]): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const roleModels = await this.resolveRoles(...roles);
+      if (roleModels.length === 0) {
+        return;
+      }
+
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
@@ -72,7 +89,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
       const attachPayload: Record<string | number, Record<string, unknown>> = {};
       for (const r of roleModels) {
-        attachPayload[r.id] = pivotAttributes;
+        attachPayload[toRecordKey(getModelId(r))] = pivotAttributes;
       }
 
       await self.related('roles').attach(attachPayload);
@@ -127,7 +144,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
         const syncPayload: Record<string | number, Record<string, unknown>> = {};
         for (const r of roleModels) {
-          syncPayload[r.id] = pivotAttributes;
+          syncPayload[toRecordKey(getModelId(r))] = pivotAttributes;
         }
 
         await self.related('roles').attach(syncPayload);
@@ -139,6 +156,10 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
     public async revokeRole(...roles: (string | LucidRow)[]): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const roleModels = await this.resolveRoles(...roles);
+      if (roleModels.length === 0) {
+        return;
+      }
+
       const self = this as unknown as HasRolesInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
@@ -149,7 +170,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         .wherePivot(resolver.config.columnNames.modelMorphType, morphType)
         .whereInPivot(
           resolver.config.columnNames.rolePivotKey,
-          roleModels.map((r) => r.id),
+          roleModels.map((r) => getModelId(r)),
         );
 
       if (resolver.config.teams) {

@@ -3,10 +3,19 @@ import type {
   PermissionModelContract,
   PermissionsColumnNames,
   PermissionsTableNames,
+  PrimaryKeyType,
   ResolvedPermissionsConfig,
   RoleModelContract,
 } from './types.js';
 import stringHelpers from '@adonisjs/core/helpers/string';
+
+export function normalizeId(value: PrimaryKeyType): string | number {
+  return typeof value === 'bigint' ? value.toString() : value;
+}
+
+export function getModelId(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): PrimaryKeyType {
+  return model.$primaryKeyValue ?? model.id;
+}
 
 export const DEFAULT_TABLE_NAMES: PermissionsTableNames = {
   roles: 'roles',

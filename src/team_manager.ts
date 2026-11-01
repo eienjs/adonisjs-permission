@@ -1,7 +1,8 @@
+import type { PrimaryKeyType } from './types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 interface TeamStore {
-  teamId: string | number | null;
+  teamId: PrimaryKeyType | null;
 }
 
 export class TeamManager {
@@ -9,9 +10,9 @@ export class TeamManager {
 
   private storage = new AsyncLocalStorage<TeamStore>();
 
-  private fallbackTeamId: string | number | null = null;
+  private fallbackTeamId: PrimaryKeyType | null = null;
 
-  public setTeamId(teamId: string | number | null): void {
+  public setTeamId(teamId: PrimaryKeyType | null): void {
     const store = this.storage.getStore();
     if (store) {
       store.teamId = teamId;
@@ -20,11 +21,11 @@ export class TeamManager {
     }
   }
 
-  public getTeamId(): string | number | null {
+  public getTeamId(): PrimaryKeyType | null {
     return this.storage.getStore()?.teamId ?? this.fallbackTeamId;
   }
 
-  public async runWithTeam<T>(teamId: string | number | null, callback: () => T | Promise<T>): Promise<T> {
+  public async runWithTeam<T>(teamId: PrimaryKeyType | null, callback: () => T | Promise<T>): Promise<T> {
     return this.storage.run({ teamId }, async () => {
       return callback();
     });
@@ -35,16 +36,16 @@ export class TeamManager {
   }
 }
 
-export const setPermissionsTeamId = (teamId: string | number | null): void => {
+export const setPermissionsTeamId = (teamId: PrimaryKeyType | null): void => {
   TeamManager.getInstance().setTeamId(teamId);
 };
 
-export const getPermissionsTeamId = (): string | number | null => {
+export const getPermissionsTeamId = (): PrimaryKeyType | null => {
   return TeamManager.getInstance().getTeamId();
 };
 
 export const runWithTeam = async <T>(
-  teamId: string | number | null,
+  teamId: PrimaryKeyType | null,
   callback: () => T | Promise<T>,
 ): Promise<T> => {
   return TeamManager.getInstance().runWithTeam(teamId, callback);

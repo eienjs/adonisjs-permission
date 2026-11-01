@@ -5,6 +5,8 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 
 export type NoConstructor<T> = Omit<T, 'constructor'>;
 
+export type PrimaryKeyType = string | number | bigint;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ModelConstructor<T> = new (...args: any[]) => T;
 
@@ -94,32 +96,63 @@ export interface AuthorizableConfig {
 }
 
 export interface PermissionPropertiesModel extends LucidRow {
-  id: string | number;
+  id: PrimaryKeyType;
   name: string;
   guardName?: string;
 }
 
 export interface RolePropertiesModel extends LucidRow {
-  id: string | number;
+  id: PrimaryKeyType;
   name: string;
   guardName?: string;
-  teamId?: string | number | null;
+  teamId?: PrimaryKeyType | null;
 }
 
 export type RoleInstance = RolePropertiesModel & RoleableMixin;
 export type PermissionInstance = PermissionPropertiesModel & PermissibleMixin;
 
-export type RoleModelContract = LucidModel & {
-  findByName: (name: string, guardName?: string) => Promise<RoleInstance | null>;
-  findById: (id: string | number) => Promise<RoleInstance | null>;
-  findOrCreate: (attributes: { name: string; guardName?: string; [key: string]: unknown }) => Promise<RoleInstance>;
-};
+export type RoleModelContract = LucidModel
+  & ModelConstructor<RoleInstance> & {
+    findByName: <T extends LucidModel = RoleModelContract>(
+      this: T,
+      name: string,
+      guardName?: string,
+      teamId?: PrimaryKeyType | null,
+    ) => Promise<InstanceType<T>>;
+    findById: <T extends LucidModel = RoleModelContract>(
+      this: T,
+      id: PrimaryKeyType,
+      guardName?: string,
+      teamId?: PrimaryKeyType | null,
+    ) => Promise<InstanceType<T>>;
+    findOrCreate: <T extends LucidModel = RoleModelContract>(
+      this: T,
+      attributes: {
+        name: string;
+        guardName?: string;
+        teamId?: PrimaryKeyType | null;
+        [key: string]: unknown;
+      },
+    ) => Promise<InstanceType<T>>;
+  };
 
-export type PermissionModelContract = LucidModel & {
-  findByName: (name: string, guardName?: string) => Promise<PermissionInstance | null>;
-  findById: (id: string | number) => Promise<PermissionInstance | null>;
-  findOrCreate: (attributes: { name: string; guardName?: string }) => Promise<PermissionInstance>;
-};
+export type PermissionModelContract = LucidModel
+  & ModelConstructor<PermissionInstance> & {
+    findByName: <T extends LucidModel = PermissionModelContract>(
+      this: T,
+      name: string,
+      guardName?: string,
+    ) => Promise<InstanceType<T>>;
+    findById: <T extends LucidModel = PermissionModelContract>(
+      this: T,
+      id: PrimaryKeyType,
+      guardName?: string,
+    ) => Promise<InstanceType<T>>;
+    findOrCreate: <T extends LucidModel = PermissionModelContract>(
+      this: T,
+      attributes: { name: string; guardName?: string; [key: string]: unknown },
+    ) => Promise<InstanceType<T>>;
+  };
 
 export interface HasPermissionsProperties extends LucidRow {
   permissions: ManyToMany<LucidModel>;
@@ -188,7 +221,7 @@ export interface HasAuthorizableMethods {
   hasAllPermissions: (...permissions: (string | LucidRow)[]) => Promise<boolean>;
   can: (permission: string | LucidRow) => Promise<boolean>;
   cannot: (permission: string | LucidRow) => Promise<boolean>;
-  forTeam: (teamId: string | number | null) => this;
+  forTeam: (teamId: PrimaryKeyType | null) => this;
 }
 
 export interface HasAuthorizableMixin
@@ -218,9 +251,9 @@ export type HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMod
 
 export interface CatalogInspectionResult {
   missingPermissions: string[];
-  obsoletePermissions: { id: number | string; name: string; assignedCount: number }[];
+  obsoletePermissions: { id: PrimaryKeyType; name: string; assignedCount: number }[];
   missingRoles: string[];
-  obsoleteRoles: { id: number | string; name: string; assignedCount: number }[];
+  obsoleteRoles: { id: PrimaryKeyType; name: string; assignedCount: number }[];
   rolesWithPermissionChanges: { role: string; toAttach: string[]; toDetach: string[] }[];
 }
 

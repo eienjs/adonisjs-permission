@@ -130,7 +130,7 @@ test.group('Catalog Syncer', () => {
     // Check author role has both permissions attached
     const authorRole = await Role.findByName('author', 'web');
     assert.isNotNull(authorRole);
-    assert.isTrue(await authorRole!.hasPermissionTo('posts.create'));
-    assert.isTrue(await authorRole!.hasPermissionTo('posts.edit'));
+    assert.isTrue(await authorRole.hasPermissionTo('posts.create'));
+    assert.isTrue(await authorRole.hasPermissionTo('posts.edit'));
   });
 });

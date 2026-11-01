@@ -7,10 +7,17 @@ import type {
   PermissibleMixin,
   PermissionModelContract,
   PermissionPropertiesModel,
+  PrimaryKeyType,
 } from '../types.js';
 import { column, manyToMany } from '@adonisjs/lucid/orm';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
-import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
+import {
+  getModelId,
+  getPivotColumnNames,
+  getPivotTableNames,
+  ModelResolver,
+  normalizeId,
+} from '../model_resolver.js';
 
 export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
@@ -46,13 +53,14 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
 
       const { modelHasPermissions } = resolver.config.tableNames;
       const { permissionPivotKey, modelMorphKey, modelMorphType } = resolver.config.columnNames;
-      const self = this as unknown as { id: string | number };
+      const self = this as unknown as { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType };
+      const permissionId = normalizeId(getModelId(self));
 
       return TargetModel.query().whereIn(TargetModel.primaryKey, (subQuery) => {
         void subQuery
           .from(modelHasPermissions)
           .select(modelMorphKey)
-          .where(permissionPivotKey, self.id)
+          .where(permissionPivotKey, permissionId)
           .where(modelMorphType, morphType);
       });
     }
@@ -75,15 +83,15 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
 
     public static async findById(
       this: LucidModel,
-      id: number | string,
+      id: PrimaryKeyType,
       guardName?: string,
     ): Promise<LucidRow> {
       const resolver = ModelResolver.getInstance();
       const guard = guardName ?? resolver.config.defaultGuard;
-      const permission = await this.query().where('id', id).where('guard_name', guard).first();
+      const permission = await this.query().where(this.primaryKey, normalizeId(id)).where('guard_name', guard).first();
 
       if (!permission) {
-        throw new E_PERMISSION_UNAUTHORIZED_ACCESS(`There is no permission with id \`${id}\``, {
+        throw new E_PERMISSION_UNAUTHORIZED_ACCESS(`There is no permission with id \`${id.toString()}\``, {
           status: 404,
           code: 'E_PERMISSION_NOT_FOUND',
         });
@@ -94,7 +102,7 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
 
     public static async findOrCreate(
       this: LucidModel,
-      values: { name: string; guardName?: string },
+      values: { name: string; guardName?: string; [key: string]: unknown },
     ): Promise<LucidRow> {
       const resolver = ModelResolver.getInstance();
       const guard = values.guardName ?? resolver.config.defaultGuard;
@@ -103,10 +111,14 @@ export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>
         .where('guard_name', guard)
         .first();
 
-      permission ??= await this.create({
-        name: values.name,
-        guardName: guard,
-      });
+      if (!permission) {
+        const { name, guardName: _guardName, ...rest } = values;
+        permission = await this.create({
+          ...rest,
+          name,
+          guardName: guard,
+        });
+      }
 
       return permission;
     }

@@ -70,8 +70,8 @@ test.group('Ace Commands', (group) => {
     command.assertSucceeded();
     const adminRole = await Role.findByName('admin', 'web');
     assert.isNotNull(adminRole);
-    assert.isTrue(await adminRole!.hasPermissionTo('feature.view'));
-    assert.isTrue(await adminRole!.hasPermissionTo('feature.manage'));
+    assert.isTrue(await adminRole.hasPermissionTo('feature.view'));
+    assert.isTrue(await adminRole.hasPermissionTo('feature.manage'));
   });
 
   test('permissions:cache-reset flushes cache without errors', async () => {

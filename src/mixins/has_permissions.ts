@@ -3,12 +3,25 @@ import type { NormalizeConstructor } from '@adonisjs/core/types/helpers';
 import type { BaseModel } from '@adonisjs/lucid/orm';
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
-import type { HasPermissionsMixin, ModelConstructor, PermissionInstance } from '../types.js';
+import type {
+  HasPermissionsMixin,
+  ModelConstructor,
+  PermissionInstance,
+  PrimaryKeyType,
+} from '../types.js';
 import { manyToMany } from '@adonisjs/lucid/orm';
 import { emitEvent, PermissionAttachedEvent, PermissionDetachedEvent } from '../events.js';
 import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
 import { PermissionRegistrar } from '../registrar.js';
 import { getPermissionsTeamId } from '../team_manager.js';
+
+function getModelId(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): PrimaryKeyType {
+  return model.$primaryKeyValue ?? model.id;
+}
+
+function toRecordKey(id: PrimaryKeyType): string | number {
+  return typeof id === 'bigint' ? id.toString() : id;
+}
 
 interface PermissionRelationQueryBuilder {
   where: (col: string, val: unknown) => PermissionRelationQueryBuilder;
@@ -24,20 +37,20 @@ interface PermissionRelationQueryBuilder {
 interface PivotQueryBuilder {
   wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
   whereNullPivot: (col: string) => PivotQueryBuilder;
-  whereInPivot: (col: string, vals: (string | number)[]) => PivotQueryBuilder;
+  whereInPivot: (col: string, vals: PrimaryKeyType[]) => PivotQueryBuilder;
   del: () => Promise<number>;
 }
 
 interface HasPermissionsInternalInstance {
-  currentTeamId?: string | number | null;
+  currentTeamId?: PrimaryKeyType | null;
   usesMorphPivot?: boolean;
   guardName?: string;
   permissions: PermissionInstance[];
   load: (relation: string) => Promise<void>;
   related: (relation: string) => {
-    attach: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
+    attach: (payload: Record<string | number, Record<string, unknown>> | (string | number)[]) => Promise<void>;
     sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
-    detach: (ids: (string | number)[]) => Promise<void>;
+    detach: (ids?: (string | number)[]) => Promise<void>;
     pivotQuery: () => PivotQueryBuilder;
     query: () => PermissionRelationQueryBuilder;
   };
@@ -47,7 +60,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
   superclass: Model,
 ): Model & ModelConstructor<InstanceType<Model> & HasPermissionsMixin> => {
   class ModelWithPermissions extends superclass {
-    public currentTeamId?: string | number | null;
+    public currentTeamId?: PrimaryKeyType | null;
 
     protected usesMorphPivot = true;
 
@@ -64,6 +77,10 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
     ): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const permModels = await this.resolvePermissions(...permissions);
+      if (permModels.length === 0) {
+        return;
+      }
+
       const self = this as unknown as HasPermissionsInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
@@ -77,7 +94,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 
       const attachPayload: Record<string | number, Record<string, unknown>> = {};
       for (const p of permModels) {
-        attachPayload[p.id] = pivotAttributes;
+        attachPayload[toRecordKey(getModelId(p))] = pivotAttributes;
       }
 
       await self.related('permissions').attach(attachPayload);
@@ -109,12 +126,15 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       if (self.usesMorphPivot === false) {
-        const syncPayload: Record<string | number, Record<string, unknown>> = {};
-        for (const p of permModels) {
-          syncPayload[p.id] = {};
-        }
+        await self.related('permissions').detach();
+        if (permModels.length > 0) {
+          const syncPayload: Record<string | number, Record<string, unknown>> = {};
+          for (const p of permModels) {
+            syncPayload[toRecordKey(getModelId(p))] = {};
+          }
 
-        await self.related('permissions').sync(syncPayload);
+          await self.related('permissions').attach(syncPayload);
+        }
         this.clearRegistrarCache();
 
         return;
@@ -146,7 +166,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 
         const syncPayload: Record<string | number, Record<string, unknown>> = {};
         for (const p of permModels) {
-          syncPayload[p.id] = pivotAttributes;
+          syncPayload[toRecordKey(getModelId(p))] = pivotAttributes;
         }
 
         await self.related('permissions').attach(syncPayload);
@@ -160,11 +180,17 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
     ): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const permModels = await this.resolvePermissions(...permissions);
+      if (permModels.length === 0) {
+        return;
+      }
+
       const self = this as unknown as HasPermissionsInternalInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       if (self.usesMorphPivot === false) {
-        await self.related('permissions').detach(permModels.map((p) => p.id));
+        await self
+          .related('permissions')
+          .detach(permModels.map((p) => toRecordKey(getModelId(p))));
       } else {
         const morphType = resolver.getMorphType(this.constructor);
         let pivotQuery = self
@@ -173,7 +199,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
           .wherePivot(resolver.config.columnNames.modelMorphType, morphType)
           .whereInPivot(
             resolver.config.columnNames.permissionPivotKey,
-            permModels.map((p) => p.id),
+            permModels.map((p) => getModelId(p)),
           );
 
         if (resolver.config.teams) {

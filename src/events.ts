@@ -1,11 +1,12 @@
 import type { EmitterService } from '@adonisjs/core/types';
 import type { LucidRow } from '@adonisjs/lucid/types/model';
+import type { PrimaryKeyType } from './types.js';
 
 export class RoleAttachedEvent {
   public constructor(
     public model: LucidRow,
     public role: LucidRow | string,
-    public teamId?: string | number | null,
+    public teamId?: PrimaryKeyType | null,
   ) {}
 }
 
@@ -13,7 +14,7 @@ export class RoleDetachedEvent {
   public constructor(
     public model: LucidRow,
     public role: LucidRow | string,
-    public teamId?: string | number | null,
+    public teamId?: PrimaryKeyType | null,
   ) {}
 }
 
@@ -21,7 +22,7 @@ export class PermissionAttachedEvent {
   public constructor(
     public model: LucidRow,
     public permission: LucidRow | string,
-    public teamId?: string | number | null,
+    public teamId?: PrimaryKeyType | null,
   ) {}
 }
 
@@ -29,7 +30,7 @@ export class PermissionDetachedEvent {
   public constructor(
     public model: LucidRow,
     public permission: LucidRow | string,
-    public teamId?: string | number | null,
+    public teamId?: PrimaryKeyType | null,
   ) {}
 }
 
