@@ -3,9 +3,10 @@ import { defineConfig } from 'tsdown';
 export default defineConfig({
   entry: [
     'index.ts',
+    { types: 'src/types/main.ts' },
     { 'providers/*': 'providers/*.ts' },
-    { 'commands/*': 'commands/*.ts' },
     { 'middleware/*': 'src/middleware/*.ts' },
+    { 'commands/*': 'commands/*.ts' },
   ],
   outDir: 'build',
   clean: true,
@@ -14,6 +15,13 @@ export default defineConfig({
   fixedExtension: false,
   dts: true,
   target: 'esnext',
+  exports: {
+    customExports(pkg, _context) {
+      pkg['./commands'] = './build/commands/main.js';
+
+      return pkg;
+    },
+  },
   unbundle: true,
   copy: [
     { from: 'stubs/**/*.stub', to: 'build/stubs', flatten: false },

@@ -26,13 +26,20 @@
   ],
   "exports": {
     ".": "./build/index.js",
-    "./types": "./build/src/types/main.js",
-    "./commands": "./build/commands/main.js",
-    "./permissions_provider": "./build/providers/permissions_provider.js",
-    "./role_middleware": "./build/middleware/role_middleware.js",
-    "./permission_middleware": "./build/middleware/permission_middleware.js",
-    "./role_or_permission_middleware": "./build/middleware/role_or_permission_middleware.js",
-    "./package.json": "./package.json"
+    "./commands/cache_reset": "./build/commands/cache_reset.js",
+    "./commands/create_permission": "./build/commands/create_permission.js",
+    "./commands/create_role": "./build/commands/create_role.js",
+    "./commands/show": "./build/commands/show.js",
+    "./commands/sync": "./build/commands/sync.js",
+    "./commands/sync_permissions": "./build/commands/sync_permissions.js",
+    "./commands/sync_roles": "./build/commands/sync_roles.js",
+    "./middleware/permission_middleware": "./build/middleware/permission_middleware.js",
+    "./middleware/role_middleware": "./build/middleware/role_middleware.js",
+    "./middleware/role_or_permission_middleware": "./build/middleware/role_or_permission_middleware.js",
+    "./providers/permissions_provider": "./build/providers/permissions_provider.js",
+    "./types": "./build/types.js",
+    "./package.json": "./package.json",
+    "./commands": "./build/commands/main.js"
   },
   "files": [
     "build"
@@ -44,6 +51,7 @@
     "prepare": "is-in-ci || husky",
     "changelog": "auto-changelog -u -p",
     "commitlint": "commitlint --edit",
+    "index:commands": "adonis-kit index build/commands",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -51,7 +59,7 @@
     "test:coverage": "c8 pnpm run test",
     "tool:code": "pnpm run lint:check && pnpm run typecheck",
     "tool:build": "pnpm run tool:code && pnpm run test",
-    "build": "tsdown",
+    "build": "tsdown && pnpm run index:commands",
     "release": "release-it"
   },
   "peerDependencies": {
