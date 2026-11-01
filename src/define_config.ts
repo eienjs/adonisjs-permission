@@ -1,5 +1,6 @@
 import type { ConfigProvider } from '@adonisjs/core/types';
-import type { PermissionsConfig, ResolvedPermissionsConfig } from './types.js';
+import type { ResolvedPermissionsConfig } from './types/internal.js';
+import type { PermissionsConfig } from './types/main.js';
 import { configProvider } from '@adonisjs/core';
 
 export function defineConfig(config: PermissionsConfig): ConfigProvider<ResolvedPermissionsConfig> {

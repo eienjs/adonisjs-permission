@@ -1,10 +1,10 @@
 import type { ModelResolver } from './model_resolver.js';
+import type { ResolvedPermissionsConfig } from './types/internal.js';
 import type {
   PermissionInstance,
   PrimaryKeyType,
-  ResolvedPermissionsConfig,
   RoleInstance,
-} from './types.js';
+} from './types/main.js';
 
 export interface CachedPermissionData {
   id: PrimaryKeyType;

@@ -1,5 +1,6 @@
 import type { ApplicationService } from '@adonisjs/core/types';
-import type { PermissionsConfig, ResolvedPermissionsConfig } from '../src/types.js';
+import type { ResolvedPermissionsConfig } from '../src/types/internal.js';
+import type { PermissionsConfig } from '../src/types/main.js';
 import { configProvider } from '@adonisjs/core';
 import { RuntimeException } from '@adonisjs/core/exceptions';
 import { CatalogSyncer } from '../src/catalog_syncer.js';

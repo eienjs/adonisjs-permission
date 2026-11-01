@@ -1,6 +1,6 @@
 import type { EmitterService } from '@adonisjs/core/types';
 import type { LucidRow } from '@adonisjs/lucid/types/model';
-import type { PrimaryKeyType } from './types.js';
+import type { PrimaryKeyType } from './types/main.js';
 
 export class RoleAttachedEvent {
   public constructor(

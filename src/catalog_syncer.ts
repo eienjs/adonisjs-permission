@@ -1,14 +1,14 @@
 import type { ModelResolver } from './model_resolver.js';
 import type { PermissionRegistrar } from './registrar.js';
+import type { ResolvedPermissionsConfig } from './types/internal.js';
 import type {
   CatalogInspectionResult,
   PermissionInstance,
   PrimaryKeyType,
-  ResolvedPermissionsConfig,
   RoleInstance,
   SyncResult,
-} from './types.js';
-import { getModelId, normalizeId } from './model_resolver.js';
+} from './types/main.js';
+import { getModelId, normalizeId } from './utils/model_utils.js';
 
 export interface SyncOptions {
   guard?: string;

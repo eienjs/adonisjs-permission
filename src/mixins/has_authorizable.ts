@@ -2,16 +2,19 @@ import type { NormalizeConstructor } from '@adonisjs/core/types/helpers';
 import type { BaseModel } from '@adonisjs/lucid/orm';
 import type { LucidRow } from '@adonisjs/lucid/types/model';
 import type {
-  HasAuthorizableMixin,
+  InternalAuthorizableInstance,
   ModelConstructor,
+} from '../types/internal.js';
+import type {
+  HasAuthorizableMixin,
   PermissionInstance,
   PrimaryKeyType,
-  RoleInstance,
-} from '../types.js';
+} from '../types/main.js';
 import { compose } from '@adonisjs/core/helpers';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
-import { getModelId, ModelResolver, normalizeId } from '../model_resolver.js';
+import { ModelResolver } from '../model_resolver.js';
 import { getPermissionsTeamId } from '../team_manager.js';
+import { getModelId, normalizeId } from '../utils/model_utils.js';
 import { applyTeamPivotScope } from '../utils/pivot_utils.js';
 import { WildcardPermission } from '../wildcard.js';
 import { HasPermissions } from './has_permissions.js';
@@ -19,36 +22,6 @@ import { HasRoles } from './has_roles.js';
 
 function getModelIdKey(model: { id: PrimaryKeyType; $primaryKeyValue?: PrimaryKeyType }): string {
   return String(getModelId(model));
-}
-
-interface AuthorizableWhereHasQuery {
-  wherePivot: (col: string, val: unknown) => AuthorizableWhereHasQuery;
-  whereNullPivot: (col: string) => AuthorizableWhereHasQuery;
-  first: () => Promise<LucidRow | null>;
-}
-
-interface AuthorizableRolesQuery {
-  wherePivot: (col: string, val: unknown) => AuthorizableRolesQuery;
-  whereNullPivot: (col: string) => AuthorizableRolesQuery;
-  whereHas: (
-    rel: string,
-    callback: (q: { where: (col: string, val: unknown) => void }) => void,
-  ) => AuthorizableWhereHasQuery;
-  then: <TResult1 = RoleInstance[], TResult2 = never>(
-    onfulfilled?: ((value: RoleInstance[]) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ) => Promise<TResult1 | TResult2>;
-}
-
-interface AuthorizableInternalInstance {
-  currentTeamId?: PrimaryKeyType | null;
-  guardName?: string;
-  hasRole: (role: string) => Promise<boolean>;
-  hasDirectPermission: (permission: string | LucidRow) => Promise<boolean>;
-  getDirectPermissions: () => Promise<LucidRow[]>;
-  related: (relation: string) => {
-    query: () => AuthorizableRolesQuery;
-  };
 }
 
 export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseModel>>(
@@ -67,7 +40,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
     public async hasPermissionViaRole(permission: string | LucidRow): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
       const targetName = typeof permission === 'string' ? permission : (permission as unknown as { name: string }).name;
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -90,7 +63,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
 
     public async getPermissionsViaRoles(): Promise<LucidRow[]> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -124,7 +97,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
     }
 
     public async getAllPermissions(): Promise<LucidRow[]> {
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
       const direct = (await self.getDirectPermissions()) as unknown as PermissionInstance[];
       const viaRoles = (await this.getPermissionsViaRoles()) as unknown as PermissionInstance[];
 
@@ -150,7 +123,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
     ): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
       const targetName = typeof permission === 'string' ? permission : (permission as unknown as { name: string }).name;
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
 
       // 1. Check Super-Admin bypass
       if (
@@ -207,7 +180,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
 
     public async hasAnyPermission(...permissions: (string | LucidRow)[]): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
 
       if (
         resolver.config.superAdmin.enabled
@@ -228,7 +201,7 @@ export const HasAuthorizable = <Model extends NormalizeConstructor<typeof BaseMo
 
     public async hasAllPermissions(...permissions: (string | LucidRow)[]): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as AuthorizableInternalInstance;
+      const self = this as unknown as InternalAuthorizableInstance;
 
       if (
         resolver.config.superAdmin.enabled

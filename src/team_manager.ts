@@ -1,4 +1,4 @@
-import type { PrimaryKeyType } from './types.js';
+import type { PrimaryKeyType } from './types/main.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 interface TeamStore {

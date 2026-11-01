@@ -4,11 +4,14 @@ import type { BaseModel } from '@adonisjs/lucid/orm';
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 import type {
-  HasPermissionsMixin,
+  InternalHasPermissionsInstance,
   ModelConstructor,
+} from '../types/internal.js';
+import type {
+  HasPermissionsMixin,
   PermissionInstance,
   PrimaryKeyType,
-} from '../types.js';
+} from '../types/main.js';
 import { manyToMany } from '@adonisjs/lucid/orm';
 import { emitEvent, PermissionAttachedEvent, PermissionDetachedEvent } from '../events.js';
 import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
@@ -16,39 +19,6 @@ import { PermissionRegistrar } from '../registrar.js';
 import { getPermissionsTeamId } from '../team_manager.js';
 import { getModelId, toRecordKey } from '../utils/model_utils.js';
 import { applyTeamPivotScope, buildMorphPivotPayload } from '../utils/pivot_utils.js';
-
-interface PermissionRelationQueryBuilder {
-  where: (col: string, val: unknown) => PermissionRelationQueryBuilder;
-  wherePivot: (col: string, val: unknown) => PermissionRelationQueryBuilder;
-  whereNullPivot: (col: string) => PermissionRelationQueryBuilder;
-  first: () => Promise<LucidRow | null>;
-  then: <TResult1 = PermissionInstance[], TResult2 = never>(
-    onfulfilled?: ((value: PermissionInstance[]) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ) => Promise<TResult1 | TResult2>;
-}
-
-interface PivotQueryBuilder {
-  wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
-  whereNullPivot: (col: string) => PivotQueryBuilder;
-  whereInPivot: (col: string, vals: PrimaryKeyType[]) => PivotQueryBuilder;
-  del: () => Promise<number>;
-}
-
-interface HasPermissionsInternalInstance {
-  currentTeamId?: PrimaryKeyType | null;
-  usesMorphPivot?: boolean;
-  guardName?: string;
-  permissions: PermissionInstance[];
-  load: (relation: string) => Promise<void>;
-  related: (relation: string) => {
-    attach: (payload: Record<string | number, Record<string, unknown>> | (string | number)[]) => Promise<void>;
-    sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
-    detach: (ids?: (string | number)[]) => Promise<void>;
-    pivotQuery: () => PivotQueryBuilder;
-    query: () => PermissionRelationQueryBuilder;
-  };
-}
 
 export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
@@ -75,7 +45,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
         return;
       }
 
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -114,7 +84,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
     ): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const permModels = await this.resolvePermissions(...permissions);
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       if (self.usesMorphPivot === false) {
@@ -170,7 +140,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
         return;
       }
 
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       if (self.usesMorphPivot === false) {
@@ -219,7 +189,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
     ): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
       const targetName = typeof permission === 'string' ? permission : (permission as unknown as { name: string }).name;
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       let query = self.related('permissions').query().where('name', targetName);
@@ -273,7 +243,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
 
     public async getDirectPermissions(): Promise<LucidRow[]> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
 
       let query = self.related('permissions').query();
@@ -303,7 +273,7 @@ export const HasPermissions = <Model extends NormalizeConstructor<typeof BaseMod
       ...permissions: (string | LucidRow)[]
     ): Promise<PermissionInstance[]> {
       const Permission = ModelResolver.getInstance().getPermissionModel();
-      const self = this as unknown as HasPermissionsInternalInstance;
+      const self = this as unknown as InternalHasPermissionsInstance;
       const ctor = this.constructor as unknown as { guardName?: string };
       const guard
         = self.guardName

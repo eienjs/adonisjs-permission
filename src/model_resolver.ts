@@ -1,15 +1,12 @@
 import type { LucidModel } from '@adonisjs/lucid/types/model';
+import type { ResolvedPermissionsConfig } from './types/internal.js';
 import type {
   PermissionModelContract,
   PermissionsColumnNames,
   PermissionsTableNames,
-  ResolvedPermissionsConfig,
   RoleModelContract,
-} from './types.js';
+} from './types/main.ts';
 import stringHelpers from '@adonisjs/core/helpers/string';
-import { getModelId, normalizeId, toRecordKey } from './utils/model_utils.js';
-
-export { getModelId, normalizeId, toRecordKey };
 
 export const DEFAULT_TABLE_NAMES: PermissionsTableNames = {
   roles: 'roles',

@@ -1,5 +1,5 @@
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
-import type { PrimaryKeyType } from '../types.js';
+import type { PrimaryKeyType } from '../types/main.js';
 import { getModelId, normalizeId, toRecordKey } from './model_utils.js';
 
 /**

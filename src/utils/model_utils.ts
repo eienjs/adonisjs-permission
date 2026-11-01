@@ -1,5 +1,5 @@
 import type { LucidRow } from '@adonisjs/lucid/types/model';
-import type { PrimaryKeyType } from '../types.js';
+import type { PrimaryKeyType } from '../types/main.js';
 
 /**
  * Normalizes a primary key value for database query parameters.

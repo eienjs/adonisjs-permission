@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http';
 import type { NextFn } from '@adonisjs/core/types/http';
-import type { RoleMiddlewareOptions } from '../types.js';
+import type { RoleMiddlewareOptions } from '../types/main.js';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
 import { getAuthenticatedUser, parseMiddlewareItems } from '../utils/middleware_utils.js';
 

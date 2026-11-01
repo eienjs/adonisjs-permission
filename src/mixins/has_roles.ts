@@ -4,11 +4,14 @@ import type { BaseModel } from '@adonisjs/lucid/orm';
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 import type {
-  HasRolesMixin,
+  InternalHasRolesInstance,
   ModelConstructor,
+} from '../types/internal.js';
+import type {
+  HasRolesMixin,
   PrimaryKeyType,
   RoleInstance,
-} from '../types.js';
+} from '../types/main.js';
 import { manyToMany } from '@adonisjs/lucid/orm';
 import { emitEvent, RoleAttachedEvent, RoleDetachedEvent } from '../events.js';
 import { getPivotColumnNames, getPivotTableNames, ModelResolver } from '../model_resolver.js';
@@ -16,38 +19,6 @@ import { PermissionRegistrar } from '../registrar.js';
 import { getPermissionsTeamId } from '../team_manager.js';
 import { getModelId, resolveTargetNames } from '../utils/model_utils.js';
 import { applyTeamPivotScope, buildMorphPivotPayload } from '../utils/pivot_utils.js';
-
-interface RoleRelationQueryBuilder {
-  whereIn: (col: string, values: unknown[]) => RoleRelationQueryBuilder;
-  wherePivot: (col: string, val: unknown) => RoleRelationQueryBuilder;
-  whereNullPivot: (col: string) => RoleRelationQueryBuilder;
-  first: () => Promise<LucidRow | null>;
-  then: <TResult1 = RoleInstance[], TResult2 = never>(
-    onfulfilled?: ((value: RoleInstance[]) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ) => Promise<TResult1 | TResult2>;
-}
-
-interface PivotQueryBuilder {
-  wherePivot: (col: string, val: unknown) => PivotQueryBuilder;
-  whereNullPivot: (col: string) => PivotQueryBuilder;
-  whereInPivot: (col: string, vals: PrimaryKeyType[]) => PivotQueryBuilder;
-  del: () => Promise<number>;
-}
-
-interface HasRolesInternalInstance {
-  currentTeamId?: PrimaryKeyType | null;
-  guardName?: string;
-  roles: RoleInstance[];
-  load: (relation: string) => Promise<void>;
-  related: (relation: string) => {
-    attach: (payload: Record<string | number, Record<string, unknown>> | (string | number)[]) => Promise<void>;
-    sync: (payload: Record<string | number, Record<string, unknown>>) => Promise<void>;
-    detach: (ids?: (string | number)[]) => Promise<void>;
-    pivotQuery: () => PivotQueryBuilder;
-    query: () => RoleRelationQueryBuilder;
-  };
-}
 
 export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
   superclass: Model,
@@ -70,7 +41,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         return;
       }
 
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -106,7 +77,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
     public async syncRoles(...roles: (string | LucidRow)[]): Promise<void> {
       const resolver = ModelResolver.getInstance();
       const roleModels = await this.resolveRoles(...roles);
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -144,7 +115,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
         return;
       }
 
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -196,7 +167,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public async hasAnyRole(...roles: (string | LucidRow)[]): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
       const targetNames = resolveTargetNames(roles);
@@ -218,7 +189,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public async hasAllRoles(...roles: (string | LucidRow)[]): Promise<boolean> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
       const targetNames = resolveTargetNames(roles);
@@ -259,7 +230,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     public async getRoleNames(): Promise<string[]> {
       const resolver = ModelResolver.getInstance();
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const teamId = self.currentTeamId === undefined ? getPermissionsTeamId() : self.currentTeamId;
       const morphType = resolver.getMorphType(this.constructor);
 
@@ -279,7 +250,7 @@ export const HasRoles = <Model extends NormalizeConstructor<typeof BaseModel>>(
 
     protected async resolveRoles(...roles: (string | LucidRow)[]): Promise<RoleInstance[]> {
       const Role = ModelResolver.getInstance().getRoleModel();
-      const self = this as unknown as HasRolesInternalInstance;
+      const self = this as unknown as InternalHasRolesInstance;
       const ctor = this.constructor as unknown as { guardName?: string };
       const guard
         = self.guardName

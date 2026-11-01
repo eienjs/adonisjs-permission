@@ -4,20 +4,21 @@ import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model';
 import type { ManyToMany } from '@adonisjs/lucid/types/relations';
 import type {
   ModelConstructor,
+  PermissionPropertiesModel,
+} from '../types/internal.js';
+import type {
   PermissibleMixin,
   PermissionModelContract,
-  PermissionPropertiesModel,
   PrimaryKeyType,
-} from '../types.js';
+} from '../types/main.js';
 import { column, manyToMany } from '@adonisjs/lucid/orm';
 import { E_PERMISSION_UNAUTHORIZED_ACCESS } from '../errors.js';
 import {
-  getModelId,
   getPivotColumnNames,
   getPivotTableNames,
   ModelResolver,
-  normalizeId,
 } from '../model_resolver.js';
+import { getModelId, normalizeId } from '../utils/model_utils.js';
 import { resolveModelsForMorphPivot } from '../utils/pivot_utils.js';
 
 export const Permissible = <Model extends NormalizeConstructor<typeof BaseModel>>(
