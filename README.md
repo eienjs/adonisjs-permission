@@ -11,7 +11,291 @@
 
 ## Introduction
 
-This package allows you to manage user permissions and roles in a database.
+This package allows you to manage user permissions and roles in a database. Inspired by `Laravel Permission` by Spatie.
+
+## Quick Start
+
+Install the package using ace command
+
+```bash
+node ace add @eienjs/adonisjs-permission
+```
+
+## Usage
+
+### 1. Configure Models
+
+Compose your models using the provided mixins:
+
+```ts
+// app/models/user.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel } from '@adonisjs/lucid/orm';
+import { HasAuthorizable } from '@eienjs/adonisjs-permission';
+
+export default class User extends compose(BaseModel, HasAuthorizable) {
+  // your user columns...
+}
+```
+
+```ts
+// app/models/role.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel, column } from '@adonisjs/lucid/orm';
+import { Roleable } from '@eienjs/adonisjs-permission';
+
+export default class Role extends compose(BaseModel, Roleable) {
+  @column({ isPrimary: true })
+  declare id: number | string;
+}
+```
+
+```ts
+// app/models/permission.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel, column } from '@adonisjs/lucid/orm';
+import { Permissible } from '@eienjs/adonisjs-permission';
+
+export default class Permission extends compose(BaseModel, Permissible) {
+  @column({ isPrimary: true })
+  declare id: number | string;
+}
+```
+
+### 2. Working with Roles and Permissions
+
+#### Assign and Check Roles
+
+```ts
+// Assign role(s) to a user
+await user.assignRole('writer');
+await user.assignRole(['writer', 'editor']);
+
+// Remove role(s)
+await user.removeRole('writer');
+
+// Sync roles (replaces existing assignments)
+await user.syncRoles(['admin']);
+
+// Check roles
+await user.hasRole('writer'); // boolean
+await user.hasAnyRole(['admin', 'editor']); // boolean
+await user.hasAllRoles(['admin', 'editor']); // boolean
+```
+
+#### Assign and Check Permissions
+
+```ts
+// Direct permissions on user
+await user.givePermissionTo('edit articles');
+await user.givePermissionTo(['edit articles', 'publish articles']);
+
+// Revoke permission(s)
+await user.revokePermissionTo('edit articles');
+
+// Sync permissions
+await user.syncPermissions(['view articles']);
+
+// Check permission (checks both direct permissions and permissions via roles)
+await user.can('edit articles'); // or user.hasPermissionTo('edit articles')
+await user.hasAnyPermission(['edit articles', 'delete articles']);
+await user.hasAllPermissions(['view articles', 'edit articles']);
+```
+
+#### Roles with Permissions
+
+```ts
+import Role from '#models/role';
+
+const role = await Role.findOrCreate({ name: 'editor' });
+
+// Attach permissions to a role
+await role.givePermissionTo(['edit articles', 'publish articles']);
+
+// Check if role has permission
+await role.hasPermissionTo('edit articles');
+
+// Sync permissions on role
+await role.syncPermissions(['view articles', 'edit articles']);
+```
+
+### 3. Route Middlewares
+
+Protect your routes using the built-in named middlewares:
+
+```ts
+import router from '@adonisjs/core/services/router';
+import { middleware } from '#start/kernel';
+
+// Role protection
+router.get('/dashboard', [DashboardController, 'index'])
+  .use(middleware.role({ roles: ['admin', 'manager'] }));
+
+// Permission protection
+router.post('/posts', [PostsController, 'store'])
+  .use(middleware.permission({ permissions: ['create posts'] }));
+
+// Either role OR permission
+router.get('/reports', [ReportsController, 'index'])
+  .use(middleware.roleOrPermission({
+    roles: ['admin'],
+    permissions: ['view reports'],
+  }));
+```
+
+### 4. Teams / Multi-Tenancy (Optional)
+
+When `teams: true` is enabled in your configuration:
+
+```ts
+// Scope role assignment and permission checks to a specific team
+// Or execute actions within an AsyncLocalStorage team scope
+import { runWithTeam } from '@eienjs/adonisjs-permission';
+
+await user.forTeam(teamId).assignRole('admin');
+await user.forTeam(teamId).can('manage billing');
+
+await runWithTeam(teamId, async () => {
+  await user.can('manage billing');
+});
+```
+
+### 1. Configure Models
+
+Compose your models using the provided mixins:
+
+```ts
+// app/models/user.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel } from '@adonisjs/lucid/orm';
+import { HasAuthorizable } from '@eienjs/adonisjs-permission';
+
+export default class User extends compose(BaseModel, HasAuthorizable) {
+  // your user columns...
+}
+```
+
+```ts
+// app/models/role.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel, column } from '@adonisjs/lucid/orm';
+import { Roleable } from '@eienjs/adonisjs-permission';
+
+export default class Role extends compose(BaseModel, Roleable) {
+  @column({ isPrimary: true })
+  declare id: number | string;
+}
+```
+
+```ts
+// app/models/permission.ts
+import { compose } from '@adonisjs/core/helpers';
+import { BaseModel, column } from '@adonisjs/lucid/orm';
+import { Permissible } from '@eienjs/adonisjs-permission';
+
+export default class Permission extends compose(BaseModel, Permissible) {
+  @column({ isPrimary: true })
+  declare id: number | string;
+}
+```
+
+### 2. Working with Roles and Permissions
+
+#### Assign and Check Roles
+
+```ts
+// Assign role(s) to a user
+await user.assignRole('writer');
+await user.assignRole(['writer', 'editor']);
+
+// Remove role(s)
+await user.removeRole('writer');
+
+// Sync roles (replaces existing assignments)
+await user.syncRoles(['admin']);
+
+// Check roles
+await user.hasRole('writer'); // boolean
+await user.hasAnyRole(['admin', 'editor']); // boolean
+await user.hasAllRoles(['admin', 'editor']); // boolean
+```
+
+#### Assign and Check Permissions
+
+```ts
+// Direct permissions on user
+await user.givePermissionTo('edit articles');
+await user.givePermissionTo(['edit articles', 'publish articles']);
+
+// Revoke permission(s)
+await user.revokePermissionTo('edit articles');
+
+// Sync permissions
+await user.syncPermissions(['view articles']);
+
+// Check permission (checks both direct permissions and permissions via roles)
+await user.can('edit articles'); // or user.hasPermissionTo('edit articles')
+await user.hasAnyPermission(['edit articles', 'delete articles']);
+await user.hasAllPermissions(['view articles', 'edit articles']);
+```
+
+#### Roles with Permissions
+
+```ts
+import Role from '#models/role';
+
+const role = await Role.findOrCreate({ name: 'editor' });
+
+// Attach permissions to a role
+await role.givePermissionTo(['edit articles', 'publish articles']);
+
+// Check if role has permission
+await role.hasPermissionTo('edit articles');
+
+// Sync permissions on role
+await role.syncPermissions(['view articles', 'edit articles']);
+```
+
+### 3. Route Middlewares
+
+Protect your routes using the built-in named middlewares:
+
+```ts
+import router from '@adonisjs/core/services/router';
+import { middleware } from '#start/kernel';
+
+// Role protection
+router.get('/dashboard', [DashboardController, 'index'])
+  .use(middleware.role({ roles: ['admin', 'manager'] }));
+
+// Permission protection
+router.post('/posts', [PostsController, 'store'])
+  .use(middleware.permission({ permissions: ['create posts'] }));
+
+// Either role OR permission
+router.get('/reports', [ReportsController, 'index'])
+  .use(middleware.roleOrPermission({
+    roles: ['admin'],
+    permissions: ['view reports'],
+  }));
+```
+
+### 4. Teams / Multi-Tenancy (Optional)
+
+When `teams: true` is enabled in your configuration:
+
+```ts
+// Scope role assignment and permission checks to a specific team
+// Or execute actions within an AsyncLocalStorage team scope
+import { runWithTeam } from '@eienjs/adonisjs-permission';
+
+await user.forTeam(teamId).assignRole('admin');
+await user.forTeam(teamId).can('manage billing');
+
+await runWithTeam(teamId, async () => {
+  await user.can('manage billing');
+});
+```
 
 ## Documentation
 
