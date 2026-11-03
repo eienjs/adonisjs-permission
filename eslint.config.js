@@ -9,4 +9,7 @@ export default eienjs({
       parameterProperties: false,
     },
   },
+  ignores: [
+    'docs/**/*',
+  ],
 });
