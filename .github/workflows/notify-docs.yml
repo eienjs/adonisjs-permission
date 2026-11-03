@@ -1,0 +1,21 @@
+name: Notify docs
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch docs sync
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_SYNC_TOKEN }}
+          PACKAGE: ${{ github.event.repository.name }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh api repos/eienjs/docs/dispatches \
+            -f event_type=package-docs-updated \
+            -f "client_payload[package]=$PACKAGE" \
+            -f "client_payload[ref]=$TAG" \
+            -f "client_payload[version]=$TAG"
